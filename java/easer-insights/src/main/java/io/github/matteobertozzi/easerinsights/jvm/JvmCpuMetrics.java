@@ -1,0 +1,93 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.github.matteobertozzi.easerinsights.jvm;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.util.concurrent.TimeUnit;
+
+import io.github.matteobertozzi.easerinsights.DatumUnit;
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
+
+public final class JvmCpuMetrics {
+  public static final JvmCpuMetrics INSTANCE = new JvmCpuMetrics();
+
+  private final MetricCollector cpuUsage = new MetricCollector.Builder()
+    .unit(DatumUnit.PERCENT)
+    .name("jvm.cpu.cpu_usage")
+    .label("JVM CPU Usage")
+    .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
+
+  private final MetricCollector cpuTime = new MetricCollector.Builder()
+    .unit(DatumUnit.NANOSECONDS)
+    .name("jvm.cpu.cpu_time")
+    .label("JVM CPU Time")
+    .register(TimeRangeCounter.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
+
+  private final MetricCollector threadCount = new MetricCollector.Builder()
+    .unit(DatumUnit.COUNT)
+    .name("jvm.cpu.thread_count")
+    .label("JVM Thread Count")
+    .register(TimeRangeCounter.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
+
+  private JvmCpuMetrics() {
+    // no-op
+  }
+
+  private long lastCpuTimeNs = 0;
+  public void collect(final long now) {
+    cpuUsage.update(now, getCpuUsage());
+    final long nowCpuTimeNs = getCpuTimeNs();
+    cpuTime.update(now, nowCpuTimeNs - lastCpuTimeNs);
+    lastCpuTimeNs = nowCpuTimeNs;
+
+    threadCount.update(now, getThreadCount());
+  }
+
+  // ================================================================================
+  //  Threads Related
+  // ================================================================================
+  public int availableProcessors() {
+    return Runtime.getRuntime().availableProcessors();
+  }
+
+  public int getThreadCount() {
+    return Thread.activeCount();
+  }
+
+  // ================================================================================
+  //  CPU Related
+  // ================================================================================
+  public long getCpuUsage() {
+    final OperatingSystemMXBean bean = ManagementFactory.getOperatingSystemMXBean();
+    if (bean instanceof final com.sun.management.OperatingSystemMXBean osBean) {
+      return Math.round(osBean.getProcessCpuLoad() * 100);
+    }
+    return -1;
+  }
+
+  public long getCpuTimeNs() {
+    final OperatingSystemMXBean bean = ManagementFactory.getOperatingSystemMXBean();
+    if (bean instanceof final com.sun.management.OperatingSystemMXBean osBean) {
+      return osBean.getProcessCpuTime();
+    }
+    return -1;
+  }
+}
