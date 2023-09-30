@@ -46,6 +46,7 @@ public final class DemoMain {
       .label("HTTP Request Count")
       .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
+
   public static void main(final String[] args) throws Exception {
     final BuildInfo buildInfo = BuildInfo.loadInfoFromManifest("example-http-service-insights");
     System.out.println(buildInfo);

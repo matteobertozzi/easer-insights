@@ -34,7 +34,7 @@
 
   <properties>
     <easer.insights.version>0.1.0-SNAPSHOT</easer.insights.version>
-    <netty.version>4.1.98.Final</netty.version>
+    <netty.version>4.1.99.Final</netty.version>
     <jackson.version>2.15.2</jackson.version>
 
     <maven.gpg.version>3.1.0</maven.gpg.version>
@@ -118,7 +118,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven.compiler.version}</version>
         <configuration>
-          <release>17</release>
+          <release>21</release>
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>
