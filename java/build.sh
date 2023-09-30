@@ -2,6 +2,9 @@
 set -ex
 
 PROJECTS="easer-insights easer-insights-aws-cloudwatch example-http-service-insights"
+if [ $# -gt 0 ]; then
+  PROJECTS="$*"
+fi
 
 GIT_HASH=`git describe --always --dirty --match "NOT A TAG"`
 GIT_BRANCH=`git branch --no-color --show-current`
