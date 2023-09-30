@@ -6,7 +6,7 @@
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,18 +15,24 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights;
+package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-import java.io.Closeable;
-import java.io.IOException;
+class GaugeImplSt extends Gauge{
+  private long timestamp;
+  private long value;
 
-public interface EaserInsightsExporter extends Closeable {
-  String name();
+  GaugeImplSt() {
+    super();
+  }
 
-  void start() throws IOException;
-  void stop() throws IOException;
+  @Override
+  protected void set(final long timestamp, final long value) {
+    this.timestamp = timestamp;
+    this.value = value;
+  }
 
-  interface DatumBufferFlusher {
-    void datumBufferFlushAsync(byte[] page);
+  @Override
+  public GaugeSnapshot snapshot() {
+    return new GaugeSnapshot(timestamp, value);
   }
 }

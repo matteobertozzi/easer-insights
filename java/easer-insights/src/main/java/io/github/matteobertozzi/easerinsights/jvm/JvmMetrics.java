@@ -32,6 +32,7 @@ public final class JvmMetrics {
   }
 
   public void collect(final long now) {
+    JvmGcMetrics.INSTANCE.collect(now);
     JvmCpuMetrics.INSTANCE.collect(now);
     JvmMemoryMetrics.INSTANCE.collect(now);
     JvmDiskMetrics.INSTANCE.collect(now);

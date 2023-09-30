@@ -61,8 +61,8 @@ class HistogramImplSt extends Histogram {
     final long[] snapshotBounds = new long[numBounds];
     final long[] snapshotEvents = new long[numBounds];
     for (int i = firstBound; i < lastBound; ++i) {
-      snapshotBounds[i] = bound(i);
-      snapshotEvents[i] = events[i];
+      snapshotBounds[i - firstBound] = bound(i);
+      snapshotEvents[i - firstBound] = events[i];
     }
     snapshotBounds[numBounds - 1] = maxValue;
     snapshotEvents[numBounds - 1] = events[lastBound];

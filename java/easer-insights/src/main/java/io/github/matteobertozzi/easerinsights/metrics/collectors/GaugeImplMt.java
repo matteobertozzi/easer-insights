@@ -15,22 +15,26 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.util;
+package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
-public final class ImmutableMap {
-  private ImmutableMap() {
-    // no-op
+class GaugeImplMt extends Gauge {
+  private final AtomicLong timestamp = new AtomicLong();
+  private final AtomicLong value = new AtomicLong();
+
+  GaugeImplMt() {
+    super();
   }
 
-  @SuppressWarnings("unchecked")
-  public static <K, V> Map<K, V> of(final K[] keys, final V[] values) {
-    // TODO: implement me
-    final Map.Entry<K, V>[] entries = new Map.Entry[keys.length];
-    for (int i = 0; i < entries.length; i++) {
-      entries[i] = Map.entry(keys[i], values[i]);
-    }
-    return Map.ofEntries(entries);
+  @Override
+  protected void set(final long timestamp, final long value) {
+    this.timestamp.set(timestamp);
+    this.value.set(value);
+  }
+
+  @Override
+  public GaugeSnapshot snapshot() {
+    return new GaugeSnapshot(timestamp.get(), value.get());
   }
 }

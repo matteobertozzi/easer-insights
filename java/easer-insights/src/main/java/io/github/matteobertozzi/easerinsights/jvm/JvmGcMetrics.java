@@ -52,6 +52,10 @@ public final class JvmGcMetrics {
     registerListeners();
   }
 
+  public void collect(final long now) {
+    // no-op
+  }
+
   private static void onGcNotification(final Notification notification, final Object ref) {
     final GarbageCollectionNotificationInfo gcInfo = GarbageCollectionNotificationInfo.from((CompositeData) notification.getUserData());
     ((JvmGcMetrics)ref).onGcNotification(gcInfo);

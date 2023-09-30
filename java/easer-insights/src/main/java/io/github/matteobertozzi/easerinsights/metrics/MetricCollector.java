@@ -18,6 +18,7 @@
 package io.github.matteobertozzi.easerinsights.metrics;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector.MetricDataSnapshot;
@@ -30,6 +31,7 @@ public interface MetricCollector extends MetricDefinition {
   boolean hasDimensions();
   String[] dimensionKeys();
   String[] dimensionValues();
+  void forEachDimension(BiConsumer<String, String> consumer);
 
   MetricSnapshot snapshot();
 
@@ -45,5 +47,5 @@ public interface MetricCollector extends MetricDefinition {
     }
   }
 
-  record MetricSnapshot (String name, DatumUnit unit, String label, String help, Map<String, String> dimensions, MetricDataSnapshot data) {}
+  record MetricSnapshot (String name, String type, DatumUnit unit, String label, String help, Map<String, String> dimensions, MetricDataSnapshot data) {}
 }

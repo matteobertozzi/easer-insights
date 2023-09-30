@@ -20,7 +20,10 @@ package io.github.matteobertozzi.easerinsights;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 
 public final class DatumBuffer {
@@ -44,33 +47,61 @@ public final class DatumBuffer {
   }
 
   public static final class DatumBufferWriter {
+    private static final MetricCollector flushPageSize = new MetricCollector.Builder()
+      .unit(DatumUnit.BYTES)
+      .name("easer_insights_datum_buffer_flush_size")
+      .label("Easer Insights Datum Buffer Flush Size")
+      .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
+    private static final MetricCollector flushPageEntries = new MetricCollector.Builder()
+      .unit(DatumUnit.COUNT)
+      .name("easer_insights_datum_buffer_flush_entries")
+      .label("Easer Insights Datum Buffer Flush Entries")
+      .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
     private final DatumBufferFlusher flusher;
     private final int alignWindowMs;
     private final int pageSize;
 
-    private byte[] lastPage;
+    private byte[] page;
     private long lastTimestamp;
-    private int lastOffset;
+    private int pageOffset;
+    private int pageEntries;
 
     private DatumBufferWriter(final int alignWindowMs, final int pageSize, final DatumBufferFlusher flusher) {
       this.alignWindowMs = alignWindowMs;
       this.flusher = flusher;
       this.pageSize = pageSize;
-      this.lastOffset = pageSize;
+      this.pageOffset = pageSize;
     }
 
     public void flush() {
-      if (lastPage == null) return;
+      if (page == null) return;
 
-      flusher.flushAsync(lastPage);
-      lastPage = null;
-      lastTimestamp = 0;
-      lastOffset = pageSize;
+      flusher.flushAsync(page);
+      resetPage(null, pageSize);
+    }
+
+    private void resetPage(final byte[] page, final int pageOffset) {
+      final int lastPageEntries = this.pageEntries;
+      final int lastPageSize = this.pageOffset;
+
+      this.page = page;
+      this.lastTimestamp = 0;
+      this.pageOffset = pageOffset;
+      this.pageEntries = 0;
+
+      if (lastPageEntries != 0) {
+        final long now = TimeUtil.currentEpochMillis();
+        flushPageSize.update(now, lastPageSize);
+        flushPageEntries.update(now, lastPageEntries);
+      }
     }
 
     public void add(final int metricId, final long timestamp, final long value) {
-      if ((pageSize - lastOffset) < MAX_ENTRY_SIZE) {
-        rollPage();
+      if ((pageSize - pageOffset) < MAX_ENTRY_SIZE) {
+        if (page != null) flusher.flushAsync(page);
+        resetPage(new byte[pageSize], 0);
       }
 
       final int metricSize = ((32 - Integer.numberOfLeadingZeros(metricId)) + 7) >> 3;
@@ -80,38 +111,29 @@ public final class DatumBuffer {
       // |  |   |------ Timestamp Size (0: same as last, 1-6: delta, 7: full)
       // |  |---------- Value Size
       // |------------- Metric Id
-      int offset = lastOffset + 1;
-      lastPage[lastOffset] = (byte) (((metricSize - 1) << 6) | ((valueSize - 1) << 3));
-      writeFixed(lastPage, offset, metricId, metricSize);
+      int offset = pageOffset + 1;
+      page[pageOffset] = (byte) ((metricSize << 6) | ((valueSize - 1) << 3));
+      writeFixed(page, offset, metricId, metricSize);
       offset += metricSize;
-      writeFixed(lastPage, offset, value, valueSize);
+      writeFixed(page, offset, value, valueSize);
       offset += valueSize;
 
       final long alignedTimestamp = TimeUtil.alignToWindow(timestamp, alignWindowMs);
       final long deltaTs = alignedTimestamp - lastTimestamp;
       if (deltaTs > 0) {
         final int timestampSize = ((64 - Long.numberOfLeadingZeros(deltaTs)) + 7) >> 3;
-        lastPage[lastOffset] |= (byte) (timestampSize & 0x7);
-        writeFixed(lastPage, offset, deltaTs, timestampSize);
+        page[pageOffset] |= (byte) (timestampSize & 0x7);
+        writeFixed(page, offset, deltaTs, timestampSize);
         offset += timestampSize;
       } else if (deltaTs < 0) {
-        lastPage[lastOffset] |= 7;
-        writeFixed(lastPage, offset, alignedTimestamp, 6);
+        page[pageOffset] |= 7;
+        writeFixed(page, offset, alignedTimestamp, 6);
         offset += 6;
       }
 
       lastTimestamp = alignedTimestamp;
-      lastOffset = offset;
-    }
-
-    private void rollPage() {
-      if (lastPage != null) {
-        flusher.flushAsync(lastPage);
-      }
-
-      lastPage = new byte[pageSize];
-      lastTimestamp = 0;
-      lastOffset = 0;
+      pageOffset = offset;
+      pageEntries++;
     }
   }
 
@@ -157,7 +179,7 @@ public final class DatumBuffer {
 
     @Override
     public boolean hasNext() {
-      return page != null && page[offset] != 0;
+      return page != null && offset < page.length && page[offset] != 0;
     }
 
     @Override
@@ -171,7 +193,7 @@ public final class DatumBuffer {
       // |  |---------- Value Size
       // |------------- Metric Id
       final int head = this.page[offset] & 0xff;
-      final int metricSize = 1 + ((head >> 6) & 3);
+      final int metricSize = ((head >> 6) & 3);
       final int valueSize = 1 + ((head >> 3) & 7);
       final int timestampSize = (head & 7);
 

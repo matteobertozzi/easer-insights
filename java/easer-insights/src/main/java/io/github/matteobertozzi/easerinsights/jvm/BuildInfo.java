@@ -77,13 +77,13 @@ public class BuildInfo {
     return gitHash;
   }
 
-  public static BuildInfo loadInfoFromManifest(final String name) throws IOException, ParseException {
+  public static BuildInfo loadInfoFromManifest(final String name) throws IOException {
     final BuildInfo buildInfo = new BuildInfo(name);
     buildInfo.loadInfoFromManifest();
     return buildInfo;
   }
 
-  public void loadInfoFromManifest() throws IOException, ParseException {
+  public void loadInfoFromManifest() throws IOException {
     final Enumeration<URL> resources = BuildInfo.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
     while (resources.hasMoreElements()) {
       final Manifest manifest = new Manifest(resources.nextElement().openStream());

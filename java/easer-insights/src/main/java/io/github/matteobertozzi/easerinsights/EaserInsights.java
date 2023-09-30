@@ -17,9 +17,11 @@
 
 package io.github.matteobertozzi.easerinsights;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
 
 public final class EaserInsights implements AutoCloseable {
   public static final EaserInsights INSTANCE = new EaserInsights();
@@ -27,38 +29,33 @@ public final class EaserInsights implements AutoCloseable {
   private static final Logger LOGGER = Logger.getLogger("EaserInsights");
 
   private final ArrayList<EaserInsightsExporter> exporters = new ArrayList<>();
+  private final EaserInsightsExporterQueue exporterQueue = new EaserInsightsExporterQueue();
+
+  private EaserInsights() {
+    // no-op
+  }
+
+  public EaserInsights open() {
+    exporterQueue.start();
+    return this;
+  }
 
   @Override
   public void close() {
+    exporterQueue.stop();
+
     while (!exporters.isEmpty()) {
       final EaserInsightsExporter exporter = exporters.remove(exporters.size() - 1);
-      ignoreException(exporter.name(), "stopping", exporter::stop);
-      ignoreException(exporter.name(), "closing", exporter::close);
+      ThreadUtil.ignoreException(exporter.name(), "stopping", exporter::stop);
+      ThreadUtil.ignoreException(exporter.name(), "closing", exporter::close);
     }
   }
 
-  public void addExporter(final EaserInsightsExporter exporter) throws Exception {
+  public void addExporter(final EaserInsightsExporter exporter) throws IOException {
     exporter.start();
     exporters.add(exporter);
-  }
-
-  @FunctionalInterface
-  private interface RunnableWithException {
-    void run() throws Exception;
-  }
-
-  private static void ignoreException(final String name, final String action, final RunnableWithException r) {
-    try {
-      r.run();
-    } catch (final Throwable e) {
-      LOGGER.log(Level.WARNING, "failed while " + name + " was " + action + ": " + e.getMessage(), e);
+    if (exporter instanceof final EaserInsightsExporter.DatumBufferFlusher flusher) {
+      exporterQueue.subscribeToDatumBuffer(flusher);
     }
-  }
-
-  private static final class NoopExporter implements EaserInsightsExporter {
-    @Override public String name() { return "no-op"; }
-    @Override public void close() {}
-    @Override public void start() {}
-    @Override public void stop() {}
   }
 }

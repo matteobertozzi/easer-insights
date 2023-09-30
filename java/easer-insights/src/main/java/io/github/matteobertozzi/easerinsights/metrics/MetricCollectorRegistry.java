@@ -22,9 +22,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import io.github.matteobertozzi.easerinsights.DatumUnit;
@@ -32,15 +34,20 @@ import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector.MetricSnapshot;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition.AbstractMetric;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition.MetricKey;
-import io.github.matteobertozzi.easerinsights.util.ImmutableMap;
+import io.github.matteobertozzi.easerinsights.util.ImmutableCollections;
 
 public final class MetricCollectorRegistry {
   public static final MetricCollectorRegistry INSTANCE = new MetricCollectorRegistry();
 
   private static final int COLLECTORS_PAGE_SIZE = 512;
 
-  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
+  @FunctionalInterface
+  public interface MetricDatumUpdateNotifier {
+    void notifyDatumUpdate(MetricCollector collector, long timestamp, long value);
+  }
+
   private final ConcurrentHashMap<MetricKey, MetricCollector> collectorsNames = new ConcurrentHashMap<>();
+  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
   private MetricCollector[][] collectorsPages;
   private MetricCollector[] lastPage;
   private int lastPageOffset;
@@ -69,6 +76,25 @@ public final class MetricCollectorRegistry {
     }
   }
 
+  // ==============================================================================================================
+  //  Metric Datum Update related
+  // ==============================================================================================================
+  private final CopyOnWriteArrayList<MetricDatumUpdateNotifier> datumUpdateNotifiers = new CopyOnWriteArrayList<>();
+  public void registerMetricDatumUpdateNotifier(final MetricDatumUpdateNotifier notifier) {
+    datumUpdateNotifiers.add(notifier);
+  }
+
+  void datumUpdateNotifiers(final SimpleMetricCollector collector, final long timestamp, final long value) {
+    if (datumUpdateNotifiers.isEmpty()) return;
+
+    for (final MetricDatumUpdateNotifier notifier: datumUpdateNotifiers) {
+      notifier.notifyDatumUpdate(collector, timestamp, value);
+    }
+  }
+
+  // ==============================================================================================================
+  //  Metric Collector Registration related
+  // ==============================================================================================================
   MetricCollector register(final String name, final DatumUnit unit,
                            final String label, final String help, final MetricDatumCollector collector) {
     final WriteLock wlock = rwLock.writeLock();
@@ -129,14 +155,13 @@ public final class MetricCollectorRegistry {
 
     JvmMetrics.INSTANCE.addToHumanReport(sb);
 
-    for (int p = 0; p < collectorsPages.length; ++p) {
-      final MetricCollector[] page = collectorsPages[p];
-      for (int i = 0; i < page.length; ++i) {
-        if (page[i] == null) break;
+    for (final MetricCollector[] page: collectorsPages) {
+      for (final MetricCollector metricCollector: page) {
+        if (metricCollector == null) break;
 
-        final MetricSnapshot snapshot = page[i].snapshot();
+        final MetricSnapshot snapshot = metricCollector.snapshot();
         sb.append("\n--- ").append(snapshot.label()).append(" ---\n");
-        snapshot.data().addToHumanReport(page[i], sb);
+        snapshot.data().addToHumanReport(metricCollector, sb);
       }
     }
     return sb.toString();
@@ -144,11 +169,10 @@ public final class MetricCollectorRegistry {
 
   public List<MetricSnapshot> snapshot() {
     final ArrayList<MetricSnapshot> snapshot = new ArrayList<>(collectorsPages.length * COLLECTORS_PAGE_SIZE);
-    for (int p = 0; p < collectorsPages.length; ++p) {
-      final MetricCollector[] page = collectorsPages[p];
-      for (int i = 0; i < page.length; ++i) {
-        if (page[i] == null) break;
-        snapshot.add(page[i].snapshot());
+    for (final MetricCollector[] page : collectorsPages) {
+      for (final MetricCollector metricCollector : page) {
+        if (metricCollector == null) break;
+        snapshot.add(metricCollector.snapshot());
       }
     }
     return snapshot;
@@ -176,14 +200,14 @@ public final class MetricCollectorRegistry {
 
     @Override
     public void update(final long timestamp, final long value) {
-      // TODO: send update with dimensions to the exporters
       collector.update(timestamp, value);
+      MetricCollectorRegistry.INSTANCE.datumUpdateNotifiers(this, timestamp, value);
     }
 
     @Override
     public MetricSnapshot snapshot() {
-      final Map<String, String> dimensions = hasDimensions() ? ImmutableMap.of(dimensionKeys(), dimensionValues()) : null;
-      return new MetricSnapshot(name(), unit(), label(), help(), dimensions, collector.snapshot());
+      final Map<String, String> dimensions = hasDimensions() ? ImmutableCollections.mapOf(dimensionKeys(), dimensionValues()) : null;
+      return new MetricSnapshot(name(), type(), unit(), label(), help(), dimensions, collector.snapshot());
     }
 
     @Override
@@ -197,6 +221,7 @@ public final class MetricCollectorRegistry {
     @Override public boolean hasDimensions() { return false; }
     @Override public String[] dimensionKeys() { return null; }
     @Override public String[] dimensionValues() { return null; }
+    @Override public void forEachDimension(final BiConsumer<String, String> consumer) { /* no-op */ }
   }
 
   private static final class MetricCollectorWithDimensions extends SimpleMetricCollector {
@@ -214,5 +239,12 @@ public final class MetricCollectorRegistry {
     @Override public boolean hasDimensions() { return true; }
     @Override public String[] dimensionKeys() { return dimensionKeys; }
     @Override public String[] dimensionValues() { return dimensionVals; }
+
+    @Override
+    public void forEachDimension(final BiConsumer<String, String> consumer) {
+      for (int i = 0; i < dimensionKeys.length; ++i) {
+        consumer.accept(dimensionKeys[i], dimensionVals[i]);
+      }
+    }
   }
 }
