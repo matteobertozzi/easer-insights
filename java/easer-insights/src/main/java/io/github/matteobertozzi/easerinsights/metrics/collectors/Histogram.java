@@ -64,6 +64,39 @@ public abstract class Histogram implements MetricDatumCollector {
     return bounds[index];
   }
 
+  protected long[] bounds() {
+    return bounds;
+  }
+
+  // ==========================================================================================
+  protected static HistogramSnapshot snapshot(final long[] bounds, final long[] events,
+      final long minValue, final long maxValue, final long sum, final long sumSquares) {
+    long numEvents = 0;
+    for (int i = 0; i < events.length; i++) {
+      numEvents += events[i];
+    }
+
+    if (numEvents == 0) return Histogram.EMPTY_SNAPSHOT;
+
+    int firstBound = 0;
+    int lastBound = events.length - 1;
+
+    while (events[firstBound] == 0) firstBound++;
+    while (events[lastBound] == 0) lastBound--;
+
+    final int numBounds = 1 + (lastBound - firstBound);
+    final long[] snapshotBounds = new long[numBounds];
+    final long[] snapshotEvents = new long[numBounds];
+    for (int i = firstBound; i < lastBound; ++i) {
+      snapshotBounds[i - firstBound] = bounds[i];
+      snapshotEvents[i - firstBound] = events[i];
+    }
+    snapshotBounds[numBounds - 1] = maxValue;
+    snapshotEvents[numBounds - 1] = events[lastBound];
+
+    return new HistogramSnapshot(snapshotBounds, snapshotEvents, numEvents, minValue, sum, sumSquares);
+  }
+
   // ==========================================================================================
   protected static final HistogramSnapshot EMPTY_SNAPSHOT = new HistogramSnapshot(new long[0], new long[0], 0, 0, 0, 0);
   public record HistogramSnapshot(long[] bounds, long[] events, long numEvents, long minValue, long sum, long sumSquares) implements MetricDataSnapshot {

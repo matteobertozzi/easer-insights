@@ -44,29 +44,6 @@ class HistogramImplSt extends Histogram {
 
   @Override
   public MetricDataSnapshot snapshot() {
-    long numEvents = 0;
-    for (int i = 0; i < events.length; i++) {
-      numEvents += events[i];
-    }
-
-    if (numEvents == 0) return Histogram.EMPTY_SNAPSHOT;
-
-    int firstBound = 0;
-    int lastBound = events.length - 1;
-
-    while (events[firstBound] == 0) firstBound++;
-    while (events[lastBound] == 0) lastBound--;
-
-    final int numBounds = 1 + (lastBound - firstBound);
-    final long[] snapshotBounds = new long[numBounds];
-    final long[] snapshotEvents = new long[numBounds];
-    for (int i = firstBound; i < lastBound; ++i) {
-      snapshotBounds[i - firstBound] = bound(i);
-      snapshotEvents[i - firstBound] = events[i];
-    }
-    snapshotBounds[numBounds - 1] = maxValue;
-    snapshotEvents[numBounds - 1] = events[lastBound];
-
-    return new HistogramSnapshot(snapshotBounds, snapshotEvents, numEvents, minValue, sum, sumSquares);
+    return snapshot(bounds(), events, minValue, maxValue, sum, sumSquares);
   }
 }

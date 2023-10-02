@@ -46,7 +46,7 @@ public final class MetricCollectorRegistry {
     void notifyDatumUpdate(MetricCollector collector, long timestamp, long value);
   }
 
-  private final ConcurrentHashMap<MetricKey, MetricCollector> collectorsNames = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<MetricKey, MetricCollector> collectorsNames = new ConcurrentHashMap<>(1000);
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
   private MetricCollector[][] collectorsPages;
   private MetricCollector[] lastPage;
