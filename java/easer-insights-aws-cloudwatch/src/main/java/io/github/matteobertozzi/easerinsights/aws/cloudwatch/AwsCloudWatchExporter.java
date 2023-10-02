@@ -20,12 +20,20 @@ package io.github.matteobertozzi.easerinsights.aws.cloudwatch;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
+import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
 import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
+import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
@@ -33,6 +41,26 @@ import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
 
 public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
+  private final MetricCollector cloudWatchPutTime = new MetricCollector.Builder()
+    .unit(DatumUnit.NANOSECONDS)
+    .name("aws_cloudwatch_exporter_put_metric_data_time")
+    .label("CloudWatch Put Metric Data Time")
+    .register(MaxAvgTimeRangeGauge.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+
+  private final MetricCollector cloudWatchPutCount = new MetricCollector.Builder()
+    .unit(DatumUnit.COUNT)
+    .name("aws_cloudwatch_exporter_put_metric_data_count")
+    .label("CloudWatch Put Metric Data Count")
+    .register(TimeRangeCounter.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+
+  private final MetricCollector cloudWatchPutFailed = new MetricCollector.Builder()
+    .unit(DatumUnit.COUNT)
+    .name("aws_cloudwatch_exporter_put_metric_data_failed")
+    .label("CloudWatch Put Metric Data Failed")
+    .register(TimeRangeCounter.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+
+  private static final Logger LOGGER = Logger.getLogger("AwsCloudWatchExporter");
+
   private final ArrayList<Dimension> dimensions = new ArrayList<>();
   private final CloudWatchClient cloudWatch;
 
@@ -59,7 +87,7 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
     return this;
   }
 
-  public AwsCloudWatchExporter addNamespace(final String namespace) {
+  public AwsCloudWatchExporter setNamespace(final String namespace) {
     this.namespace = namespace;
     return this;
   }
@@ -93,7 +121,18 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
           .metricData(datumBatch)     // 1000/PutMetricData request.
           .build();
 
-    cloudWatch.putMetricData(request);
+    final long now = TimeUtil.currentEpochMillis();
+    final long startTime = System.nanoTime();
+    try {
+      cloudWatch.putMetricData(request);
+      cloudWatchPutCount.update(now, 1);
+    } catch (final Throwable e) {
+      LOGGER.log(Level.WARNING, "AWS CloudWatch failure, discarding metric data: " + e.getMessage(), e);
+      cloudWatchPutFailed.update(now, 1);
+    } finally {
+      final long elapsedNs = System.nanoTime() - startTime;
+      cloudWatchPutTime.update(now, elapsedNs);
+    }
   }
 
   private MetricDatum metricDatumFromEntry(final DatumBufferEntry entry) {
