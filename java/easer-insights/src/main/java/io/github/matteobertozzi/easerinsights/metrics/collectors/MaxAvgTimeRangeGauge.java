@@ -19,21 +19,15 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeImplMt;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeImplSt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
-public abstract class MaxAvgTimeRangeGauge implements MetricDatumCollector {
-  protected MaxAvgTimeRangeGauge() {
-    // no-op
-  }
-
-  @Override
-  public String type() {
-    return "MAX_AVG_TIME_RANGE_GAUGE";
-  }
-
-  // ==========================================================================================
+public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollector {
   public static MaxAvgTimeRangeGauge newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new MaxAvgTimeRangeGaugeImplSt(maxInterval, window, unit);
   }
@@ -42,17 +36,16 @@ public abstract class MaxAvgTimeRangeGauge implements MetricDatumCollector {
     return new MaxAvgTimeRangeGaugeImplMt(maxInterval, window, unit);
   }
 
-  // ==========================================================================================
-  protected abstract void set(long timestamp, long value);
-
-  @Override
-  public void update(final long timestamp, final long value) {
-    set(timestamp, value);
+  default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
+    return new MaxAvgTimeRangeGaugeCollector(definition, this, metricId);
   }
 
-  // ==========================================================================================
-  protected static final MaxAvgTimeRangeGaugeSnapshot EMPTY_SNAPSHOT = new MaxAvgTimeRangeGaugeSnapshot(0, 0, new long[0], new long[0]);
-  public record MaxAvgTimeRangeGaugeSnapshot (long lastInterval, long window, long[] avg, long[] max) implements MetricDataSnapshot {
+  // ====================================================================================================
+  //  Snapshot related
+  // ====================================================================================================
+  public record MaxAvgTimeRangeGaugeSnapshot (long lastInterval, long window, long[] count, long[] sum, long[] max) implements MetricDataSnapshot {
+    public static final MaxAvgTimeRangeGaugeSnapshot EMPTY_SNAPSHOT = new MaxAvgTimeRangeGaugeSnapshot(0, 0, new long[0], new long[0], new long[0]);
+
     public long getFirstInterval() {
       return lastInterval - (max.length * window);
     }
@@ -72,7 +65,14 @@ public abstract class MaxAvgTimeRangeGauge implements MetricDatumCollector {
       report.append(" - [");
       for (int i = 0; i < max.length; ++i) {
         if (i > 0) report.append(',');
-        report.append(unitConverter.asHumanString(avg[i])).append('/').append(unitConverter.asHumanString(max[i]));
+        final long avg = count[i] > 0 ? Math.round(sum[i] / (double)count[i]) : 0;
+        report.append(DatumUnitConverter.humanCount(count[i]));
+        report.append("/");
+        report.append(unitConverter.asHumanString(sum[i]));
+        report.append('/');
+        report.append(unitConverter.asHumanString(avg));
+        report.append('/');
+        report.append(unitConverter.asHumanString(max[i]));
       }
       report.append("] - ");
       report.append(DatumUnitConverter.humanDateFromEpochMillis(getLastInterval()));

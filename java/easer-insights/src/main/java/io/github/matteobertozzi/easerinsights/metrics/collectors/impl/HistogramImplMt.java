@@ -15,38 +15,37 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-class MaxAvgTimeRangeGaugeImplMt extends MaxAvgTimeRangeGaugeImplSt {
+public class HistogramImplMt extends HistogramImplSt {
   // TODO: bring back the striped-lock implementation
   private final ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock(true);
 
-  protected MaxAvgTimeRangeGaugeImplMt(final long maxInterval, final long window, final TimeUnit unit) {
-    super(maxInterval, window, unit);
+  public HistogramImplMt(final long[] bounds) {
+    super(bounds);
   }
 
   @Override
-  protected void set(final long timestamp, final long value) {
+  public void sample(final long timestamp, final long value) {
     final WriteLock lock = rwlock.writeLock();
     lock.lock();
     try {
-      super.set(timestamp, value);
+      super.sample(timestamp, value);
     } finally {
       lock.unlock();
     }
   }
 
   @Override
-  public MaxAvgTimeRangeGaugeSnapshot snapshot() {
+  public HistogramSnapshot dataSnapshot() {
     final ReadLock lock = rwlock.readLock();
     lock.lock();
     try {
-      return super.snapshot();
+      return super.dataSnapshot();
     } finally {
       lock.unlock();
     }

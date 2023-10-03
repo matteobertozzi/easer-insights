@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollectorRegistry;
+import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
+import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
@@ -35,12 +36,13 @@ public final class AwsCloudWatchUtil {
   }
 
   public static MetricDatum metricDatumFromEntry(final DatumBufferEntry entry, final Collection<Dimension> defaultDimensions) {
-    final MetricCollector collector = MetricCollectorRegistry.INSTANCE.get(entry.metricId());
+    final MetricCollector collector = MetricsRegistry.INSTANCE.get(entry.metricId());
+    final MetricDefinition definition = collector.definition();
     final MetricDatum.Builder builder = MetricDatum.builder();
-    builder.metricName(collector.name());
+    builder.metricName(definition.name());
     builder.timestamp(entry.instant());
-    setMetricDatumValue(builder, collector.unit(), entry.value());
-    setMetricDimensions(builder, collector, defaultDimensions);
+    setMetricDatumValue(builder, definition.unit(), entry.value());
+    setMetricDimensions(builder, definition, defaultDimensions);
     return builder.build();
   }
 
@@ -62,10 +64,10 @@ public final class AwsCloudWatchUtil {
     builder.value(value);
   }
 
-  private static void setMetricDimensions(final MetricDatum.Builder builder, final MetricCollector collector, final Collection<Dimension> defaultDimensions) {
-    if (collector.hasDimensions()) {
-      final String[] keys = collector.dimensionKeys();
-      final String[] vals = collector.dimensionValues();
+  private static void setMetricDimensions(final MetricDatum.Builder builder, final MetricDefinition metricDefinition, final Collection<Dimension> defaultDimensions) {
+    if (metricDefinition.hasDimensions()) {
+      final String[] keys = metricDefinition.dimensionKeys();
+      final String[] vals = metricDefinition.dimensionValues();
       final ArrayList<Dimension> dimensions = new ArrayList<>(keys.length + defaultDimensions.size());
       dimensions.addAll(defaultDimensions);
       for (int i = 0; i < keys.length; ++i) {

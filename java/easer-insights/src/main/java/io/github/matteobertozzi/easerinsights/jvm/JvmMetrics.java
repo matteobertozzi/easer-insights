@@ -96,6 +96,9 @@ public final class JvmMetrics {
     return System.getProperty("os.arch");
   }
 
+  // ================================================================================
+  //  Snapshot/Human Report Related
+  // ================================================================================
   public StringBuilder addToHumanReport(final StringBuilder report) {
     // Java Version
     report.append(JvmMetrics.INSTANCE.getJavaVersion()).append("\n");
@@ -131,6 +134,9 @@ public final class JvmMetrics {
     // PID
     report.append(" - PID: ").append(getPid());
     report.append("\n");
+
+    // Threads
+    JvmCpuMetrics.INSTANCE.addToHumanReport(report);
 
     return report;
   }

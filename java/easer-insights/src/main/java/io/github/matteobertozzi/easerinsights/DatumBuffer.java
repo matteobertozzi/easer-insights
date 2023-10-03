@@ -22,7 +22,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 
@@ -47,13 +47,13 @@ public final class DatumBuffer {
   }
 
   public static final class DatumBufferWriter {
-    private static final MetricCollector flushPageSize = new MetricCollector.Builder()
+    private static final MaxAvgTimeRangeGauge flushPageSize = Metrics.newCollector()
       .unit(DatumUnit.BYTES)
       .name("easer_insights_datum_buffer_flush_size")
       .label("Easer Insights Datum Buffer Flush Size")
       .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-    private static final MetricCollector flushPageEntries = new MetricCollector.Builder()
+    private static final MaxAvgTimeRangeGauge flushPageEntries = Metrics.newCollector()
       .unit(DatumUnit.COUNT)
       .name("easer_insights_datum_buffer_flush_entries")
       .label("Easer Insights Datum Buffer Flush Entries")
@@ -93,8 +93,8 @@ public final class DatumBuffer {
 
       if (lastPageEntries != 0) {
         final long now = TimeUtil.currentEpochMillis();
-        flushPageSize.update(now, lastPageSize);
-        flushPageEntries.update(now, lastPageEntries);
+        flushPageSize.sample(now, lastPageSize);
+        flushPageEntries.sample(now, lastPageEntries);
       }
     }
 

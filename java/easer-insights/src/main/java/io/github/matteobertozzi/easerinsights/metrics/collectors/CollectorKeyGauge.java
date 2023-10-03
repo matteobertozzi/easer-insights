@@ -15,24 +15,14 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics;
+package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-import java.util.Map;
+import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 
-import io.github.matteobertozzi.easerinsights.DatumUnit;
-import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector.MetricDataSnapshot;
+public interface CollectorKeyGauge {
+  void sample(String key, long timestamp, long value);
 
-public interface MetricCollector {
-  int metricId();
-  String type();
-
-  MetricDefinition definition();
-
-  MetricSnapshot snapshot();
-
-  record MetricSnapshot (String name, Map<String, String> dimensions, String type, DatumUnit unit, String label, String help, MetricDataSnapshot data) {
-    public MetricSnapshot(final MetricDefinition definition, final String type, final MetricDataSnapshot snapshot) {
-      this(definition.name(), definition.hasDimensions() ? definition.dimensions() : null, type, definition.unit(), definition.label(), definition.help(), snapshot);
-    }
+  default void sample(final String key, final long value) {
+    sample(key, TimeUtil.currentEpochMillis(), value);
   }
 }

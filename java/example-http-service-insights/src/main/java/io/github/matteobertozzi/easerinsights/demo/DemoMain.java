@@ -18,47 +18,98 @@
 package io.github.matteobertozzi.easerinsights.demo;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.DatumBuffer;
+import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
+import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.DatumUnit;
+import io.github.matteobertozzi.easerinsights.EaserInsights;
+import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
 import io.github.matteobertozzi.easerinsights.jvm.BuildInfo;
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollectorRegistry;
-import io.github.matteobertozzi.easerinsights.metrics.MetricDimensions;
+import io.github.matteobertozzi.easerinsights.metrics.MetricDimension;
+import io.github.matteobertozzi.easerinsights.metrics.Metrics;
+import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.CounterMap;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
+import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 public final class DemoMain {
-  private static final MetricDimensions execTime = new MetricDimensions.Builder()
-      .dimensions("uri")
-      .unit(DatumUnit.MILLISECONDS)
-      .name("http_exec_time")
-      .label("HTTP Exec Time")
-      .register(() -> Histogram.newSingleThreaded(new long[] { 5, 10, 25, 50, 75, 100, 250, 500, 1000 }));
+  private static final MetricDimension<Histogram> uriExecTime = Metrics.newCollectorWithDimensions()
+    .dimensions("uri")
+    .unit(DatumUnit.MILLISECONDS)
+    .name("http_endpoint_exec_time")
+    .label("HTTP Exec Time")
+    .register(() -> Histogram.newSingleThreaded(new long[] { 5, 10, 25, 50, 75, 100, 250, 500, 1000 }));
 
-  private static final MetricCollector reqCount = new MetricCollector.Builder()
-      .unit(DatumUnit.COUNT)
-      .name("http_req_count")
-      .label("HTTP Request Count")
-      .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+  private static final TimeRangeCounter reqCount = Metrics.newCollector()
+    .unit(DatumUnit.COUNT)
+    .name("http_req_count")
+    .label("HTTP Request Count")
+    .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
+  private static final CounterMap reqMap = Metrics.newCollector()
+    .unit(DatumUnit.COUNT)
+    .name("http_req_map")
+    .label("HTTP Request Map")
+    .register(CounterMap.newMultiThreaded());
+
+  private static final MaxAvgTimeRangeGauge execTime = Metrics.newCollector()
+    .unit(DatumUnit.MILLISECONDS)
+    .name("http_exec_time")
+    .label("HTTP Exec Time")
+    .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
+  private static final TopK topExecTime = Metrics.newCollector()
+    .unit(DatumUnit.MILLISECONDS)
+    .name("http_top_exec_time")
+    .label("HTTP Top Exec Time")
+    .register(TopK.newMultiThreaded(10, 60, 10, TimeUnit.MINUTES));
+
+
+  private static final class DummyExporter extends AbstractEaserInsightsDatumExporter {
+
+    @Override
+    public String name() {
+      return "dummy";
+    }
+
+    @Override
+    protected void datumBufferProcessor() {
+      final int AWS_MAX_DATUM_BATCH_SIZE = 1000;
+      final ArrayList<DatumBufferEntry> datumBatch = new ArrayList<>(AWS_MAX_DATUM_BATCH_SIZE);
+      final DatumBufferReader datumBufferReader = DatumBuffer.newReader();
+      while (isRunning()) {
+        processDatumBufferAsBatch(datumBufferReader, datumBatch,
+          entry -> entry, AWS_MAX_DATUM_BATCH_SIZE,
+          entries -> System.out.println("process " + entries.size()));
+      }
+    }
+  }
 
   public static void main(final String[] args) throws Exception {
     final BuildInfo buildInfo = BuildInfo.loadInfoFromManifest("example-http-service-insights");
     System.out.println(buildInfo);
     JvmMetrics.INSTANCE.setBuildInfo(buildInfo);
 
+    EaserInsights.INSTANCE.open();
+    EaserInsights.INSTANCE.addExporter(new DummyExporter());
+
     HttpServer.runServer(57025, Map.of(
       "/metrics", (ctx, req, query) -> {
-        final String report = MetricCollectorRegistry.INSTANCE.humanReport();
+        final String report = MetricsRegistry.INSTANCE.humanReport();
         HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.OK, HttpHeaderValues.TEXT_PLAIN, report.getBytes(StandardCharsets.UTF_8));
       },
       "/metrics/json", (ctx, req, query) -> {
-        HttpServer.sendResponse(ctx, req, query, MetricCollectorRegistry.INSTANCE.snapshot());
+        HttpServer.sendResponse(ctx, req, query, MetricsRegistry.INSTANCE.snapshot());
       },
       "*", (ctx, req, query) -> {
         final StringBuilder report = new StringBuilder();
@@ -67,8 +118,12 @@ public final class DemoMain {
         HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.NOT_FOUND, HttpHeaderValues.TEXT_PLAIN, report.toString().getBytes(StandardCharsets.UTF_8));
       }
     ), (req, query, resp, elapsedMs) -> {
-      reqCount.update(1);
-      execTime.get(query.path()).update(elapsedMs);
+      final long now = TimeUtil.currentEpochMillis();
+      reqCount.inc(now);
+      reqMap.inc(query.path(), now);
+      execTime.sample(now, elapsedMs);
+      topExecTime.sample(query.path(), now, elapsedMs);
+      uriExecTime.get(query.path()).sample(now, elapsedMs);
     });
   }
 }

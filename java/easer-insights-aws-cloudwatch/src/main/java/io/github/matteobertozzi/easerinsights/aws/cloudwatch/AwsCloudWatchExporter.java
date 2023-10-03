@@ -29,35 +29,35 @@ import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
 import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataResponse;
 
 public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
-  private final MetricCollector cloudWatchPutTime = new MetricCollector.Builder()
+  private static final MaxAvgTimeRangeGauge cloudWatchPutTime = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
     .name("aws_cloudwatch_exporter_put_metric_data_time")
     .label("CloudWatch Put Metric Data Time")
-    .register(MaxAvgTimeRangeGauge.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+    .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-  private final MetricCollector cloudWatchPutCount = new MetricCollector.Builder()
+  private static final TimeRangeCounter cloudWatchPutCount = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
     .name("aws_cloudwatch_exporter_put_metric_data_count")
     .label("CloudWatch Put Metric Data Count")
-    .register(TimeRangeCounter.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+    .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-  private final MetricCollector cloudWatchPutFailed = new MetricCollector.Builder()
+  private static final TimeRangeCounter cloudWatchPutFailed = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
     .name("aws_cloudwatch_exporter_put_metric_data_failed")
     .label("CloudWatch Put Metric Data Failed")
-    .register(TimeRangeCounter.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+    .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
   private static final Logger LOGGER = Logger.getLogger("AwsCloudWatchExporter");
 
@@ -100,7 +100,7 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
   @Override
   public void close() throws IOException {
     super.close();
-    ThreadUtil.ignoreException("cloudwatch", "closeing", cloudWatch::close);
+    ThreadUtil.ignoreException("cloudwatch", "closing", cloudWatch::close);
   }
 
   @Override
@@ -121,17 +121,20 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
           .metricData(datumBatch)     // 1000/PutMetricData request.
           .build();
 
-    final long now = TimeUtil.currentEpochMillis();
     final long startTime = System.nanoTime();
     try {
-      cloudWatch.putMetricData(request);
-      cloudWatchPutCount.update(now, 1);
+      final PutMetricDataResponse resp = cloudWatch.putMetricData(request);
+      if (resp.sdkHttpResponse().isSuccessful()) {
+        cloudWatchPutCount.inc();
+      } else {
+        cloudWatchPutFailed.inc();
+      }
     } catch (final Throwable e) {
       LOGGER.log(Level.WARNING, "AWS CloudWatch failure, discarding metric data: " + e.getMessage(), e);
-      cloudWatchPutFailed.update(now, 1);
+      cloudWatchPutFailed.inc();
     } finally {
       final long elapsedNs = System.nanoTime() - startTime;
-      cloudWatchPutTime.update(now, elapsedNs);
+      cloudWatchPutTime.sample(elapsedNs);
     }
   }
 

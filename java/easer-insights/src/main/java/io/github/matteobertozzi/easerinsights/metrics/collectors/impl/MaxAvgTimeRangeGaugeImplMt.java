@@ -15,26 +15,36 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
-class GaugeImplMt extends Gauge {
-  private final AtomicLong timestamp = new AtomicLong();
-  private final AtomicLong value = new AtomicLong();
+public class MaxAvgTimeRangeGaugeImplMt extends MaxAvgTimeRangeGaugeImplSt {
+  // TODO: bring back the striped-lock implementation
+  private final ReentrantLock lock = new ReentrantLock(true);
 
-  GaugeImplMt() {
-    super();
+  public MaxAvgTimeRangeGaugeImplMt(final long maxInterval, final long window, final TimeUnit unit) {
+    super(maxInterval, window, unit);
   }
 
   @Override
-  protected void set(final long timestamp, final long value) {
-    this.timestamp.set(timestamp);
-    this.value.set(value);
+  public void sample(final long timestamp, final long value) {
+    lock.lock();
+    try {
+      super.sample(timestamp, value);
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
-  public GaugeSnapshot snapshot() {
-    return new GaugeSnapshot(timestamp.get(), value.get());
+  public MaxAvgTimeRangeGaugeSnapshot dataSnapshot() {
+    lock.lock();
+    try {
+      return super.dataSnapshot();
+    } finally {
+      lock.unlock();
+    }
   }
 }

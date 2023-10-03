@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.4-SNAPSHOT</version>
 
   <name>easer-insights</name>
   <description>EASER Insights is Library for collecting and publishing metrics.</description>

@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights-aws-cloudwatch</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.4-SNAPSHOT</version>
 
   <name>easer-insights-aws-cloudwatch</name>
   <description>EASER Insights - AWS CloudWatch Exporter.</description>
@@ -33,8 +33,8 @@
   </developers>
 
   <properties>
-    <easer.insights.version>0.1.0-SNAPSHOT</easer.insights.version>
-    <aws-java-sdk.version>2.20.157</aws-java-sdk.version>
+    <easer.insights.version>${project.version}</easer.insights.version>
+    <aws-java-sdk.version>2.21.0</aws-java-sdk.version>
 
     <junit.version>5.10.0</junit.version>
 

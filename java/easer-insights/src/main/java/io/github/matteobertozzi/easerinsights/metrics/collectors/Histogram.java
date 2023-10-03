@@ -17,23 +17,15 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplMt;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplSt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
-public abstract class Histogram implements MetricDatumCollector {
-  private final long[] bounds;
-
-  protected Histogram(final long[] bounds) {
-    this.bounds = bounds;
-  }
-
-  @Override
-  public String type() {
-    return "HISTOGRAM";
-  }
-
-  // ==========================================================================================
+public interface Histogram extends CollectorGauge, MetricDatumCollector {
   public static Histogram newSingleThreaded(final long[] bounds) {
     return new HistogramImplSt(bounds);
   }
@@ -42,64 +34,48 @@ public abstract class Histogram implements MetricDatumCollector {
     return new HistogramImplMt(bounds);
   }
 
-  // ==========================================================================================
-  @Override
-  public void update(final long timestamp, final long value) {
-    final int boundIndex = findBoundIndex(bounds, value);
-    add(boundIndex, value);
+  static Histogram newCollector(final MetricDefinition definition, final Histogram histogram, final int metricId) {
+    return new HistogramCollector(definition, histogram, metricId);
   }
 
-  protected abstract void add(int boundIndex, long value);
-
-  private static int findBoundIndex(final long[] bounds, final long value) {
-    for (int i = 0; i < bounds.length; ++i) {
-      if (value < bounds[i]) {
-        return i;
-      }
-    }
-    return bounds.length;
+  default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
+    return new HistogramCollector(definition, this, metricId);
   }
 
-  protected long bound(final int index) {
-    return bounds[index];
-  }
-
-  protected long[] bounds() {
-    return bounds;
-  }
-
-  // ==========================================================================================
-  protected static HistogramSnapshot snapshot(final long[] bounds, final long[] events,
-      final long minValue, final long maxValue, final long sum, final long sumSquares) {
-    long numEvents = 0;
-    for (int i = 0; i < events.length; i++) {
-      numEvents += events[i];
-    }
-
-    if (numEvents == 0) return Histogram.EMPTY_SNAPSHOT;
-
-    int firstBound = 0;
-    int lastBound = events.length - 1;
-
-    while (events[firstBound] == 0) firstBound++;
-    while (events[lastBound] == 0) lastBound--;
-
-    final int numBounds = 1 + (lastBound - firstBound);
-    final long[] snapshotBounds = new long[numBounds];
-    final long[] snapshotEvents = new long[numBounds];
-    for (int i = firstBound; i < lastBound; ++i) {
-      snapshotBounds[i - firstBound] = bounds[i];
-      snapshotEvents[i - firstBound] = events[i];
-    }
-    snapshotBounds[numBounds - 1] = maxValue;
-    snapshotEvents[numBounds - 1] = events[lastBound];
-
-    return new HistogramSnapshot(snapshotBounds, snapshotEvents, numEvents, minValue, sum, sumSquares);
-  }
-
-  // ==========================================================================================
-  protected static final HistogramSnapshot EMPTY_SNAPSHOT = new HistogramSnapshot(new long[0], new long[0], 0, 0, 0, 0);
+  // ====================================================================================================
+  //  Snapshot related
+  // ====================================================================================================
   public record HistogramSnapshot(long[] bounds, long[] events, long numEvents, long minValue, long sum, long sumSquares) implements MetricDataSnapshot {
+    public static final HistogramSnapshot EMPTY_SNAPSHOT = new HistogramSnapshot(new long[0], new long[0], 0, 0, 0, 0);
+
+    public static HistogramSnapshot of(final long[] bounds, final long[] events,
+        final long minValue, final long maxValue, final long sum, final long sumSquares) {
+      long numEvents = 0;
+      for (int i = 0; i < events.length; i++) {
+        numEvents += events[i];
+      }
+
+      if (numEvents == 0) return HistogramSnapshot.EMPTY_SNAPSHOT;
+
+      int firstBound = 0;
+      int lastBound = events.length - 1;
+
+      while (events[firstBound] == 0) firstBound++;
+      while (events[lastBound] == 0) lastBound--;
+
+      final int numBounds = 1 + (lastBound - firstBound);
+      final long[] snapshotBounds = new long[numBounds];
+      final long[] snapshotEvents = new long[numBounds];
+      for (int i = firstBound; i < lastBound; ++i) {
+        snapshotBounds[i - firstBound] = bounds[i];
+        snapshotEvents[i - firstBound] = events[i];
+      }
+      snapshotBounds[numBounds - 1] = maxValue;
+      snapshotEvents[numBounds - 1] = events[lastBound];
+
+      return new HistogramSnapshot(snapshotBounds, snapshotEvents, numEvents, minValue, sum, sumSquares);
+    }
+
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
       final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
@@ -193,4 +169,48 @@ public abstract class Histogram implements MetricDatumCollector {
       return maxValue;
     }
   }
+
+  // ====================================================================================================
+  //  Default Bounds
+  // ====================================================================================================
+  public static final long[] DEFAULT_DURATION_BOUNDS_MS = new long[] {
+    5, 10, 25, 50, 75, 100, 150, 250, 350, 500, 750,  // msec
+    1000, 2500, 5000, 10000, 25000, 50000, 60000,     // sec
+    75000, 120000,                                    // min
+  };
+
+  public static final long[] DEFAULT_SMALL_DURATION_BOUNDS_NS = new long[] {
+    25, 50, 75, 100, 500, 1_000,                                      // nsec
+    10_000, 25_000, 50_000, 75_000, 100_000,                          // usec
+    250_000, 500_000, 750_000,
+    1_000_000, 5000000L, 10000000L, 25000000L, 50000000L, 75000000L,  // msec
+  };
+
+  public static final long[] DEFAULT_DURATION_BOUNDS_NS = new long[] {
+    25, 50, 100,                                                              // nsec
+    1_000, 10_000, 50_000, 100_000, 250_000, 500_000, 750_000,                // usec
+    1_000_000, 5000000L, 10000000L, 25000000L, 50000000L, 75000000L,          // msec
+    100000000L, 150000000L, 250000000L, 350000000L, 500000000L, 750000000L,   // msec
+    1000000000L, 2500000000L, 5000000000L, 10000000000L, 25000000000L,        // sec
+    60000000000L, 120000000000L, 300000000000L, 600000000000L, 900000000000L  // min
+  };
+
+  public static final long[] DEFAULT_SIZE_BOUNDS = new long[] {
+    0, 128, 256, 512,
+    1 << 10, 2 << 10, 4 << 10, 8 << 10, 16 << 10, 32 << 10, 64 << 10, 128 << 10, 256 << 10, 512 << 10, // kb
+    1 << 20, 2 << 20, 4 << 20, 8 << 20, 16 << 20, 32 << 20, 64 << 20, 128 << 20, 256 << 20, 512 << 20, // mb
+  };
+
+  public static final long[] DEFAULT_SMALL_SIZE_BOUNDS = new long[] {
+    0, 32, 64, 128, 256, 512,
+    1 << 10, 2 << 10, 4 << 10, 8 << 10, 16 << 10, 32 << 10,
+    64 << 10, 128 << 10, 256 << 10, 512 << 10, // kb
+    1 << 20
+  };
+
+  public static final long[] DEFAULT_COUNT_BOUNDS = new long[] {
+    0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000,
+    2000, 2500, 5000, 10_000, 15_000, 20_000, 25_000,
+    50_000, 75_000, 100_000, 250_000, 500_000, 1_000_000
+  };
 }

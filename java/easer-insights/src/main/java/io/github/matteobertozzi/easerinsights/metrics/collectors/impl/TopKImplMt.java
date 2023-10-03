@@ -15,38 +15,34 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
-class TimeRangeGaugeImplMt extends TimeRangeGaugeImplSt {
-    // TODO: bring back the striped-lock implementation
-  private final ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock(true);
+public class TopKImplMt extends TopKImplSt {
+  // TODO: bring back the striped-lock implementation
+  private final ReentrantLock lock = new ReentrantLock(true);
 
-  protected TimeRangeGaugeImplMt(final long maxInterval, final long window, final TimeUnit unit) {
-    super(maxInterval, window, unit);
+  public TopKImplMt(final int k, final long maxInterval, final long window, final TimeUnit unit) {
+    super(k, maxInterval, window, unit);
   }
 
   @Override
-  protected long add(final long timestamp, final long delta) {
-    final WriteLock lock = rwlock.writeLock();
+  public void sample(final String key, final long timestamp, final long value) {
     lock.lock();
     try {
-      return super.add(timestamp, delta);
+      super.sample(key, timestamp, value);
     } finally {
       lock.unlock();
     }
   }
 
   @Override
-  public TimeRangeGaugeSnapshot snapshot() {
-    final ReadLock lock = rwlock.readLock();
+  public TopKSnapshot dataSnapshot() {
     lock.lock();
     try {
-      return super.snapshot();
+      return super.dataSnapshot();
     } finally {
       lock.unlock();
     }

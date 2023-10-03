@@ -19,7 +19,6 @@ package io.github.matteobertozzi.easerinsights.jvm;
 
 import java.io.IOException;
 import java.net.URL;
-import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;

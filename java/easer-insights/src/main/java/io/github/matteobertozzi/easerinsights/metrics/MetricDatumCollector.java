@@ -18,12 +18,24 @@
 package io.github.matteobertozzi.easerinsights.metrics;
 
 public interface MetricDatumCollector {
-  String type();
-  MetricDataSnapshot snapshot();
+  enum MetricDatumUpdateType { SAMPLE, DELTA }
 
-  void update(long timestamp, long value);
+  MetricCollector newCollector(MetricDefinition definition, int metricId);
+
+  MetricDataSnapshot dataSnapshot();
 
   interface MetricDataSnapshot {
     StringBuilder addToHumanReport(MetricDefinition metricDefinition, StringBuilder report);
+  }
+
+  interface MetricDatumCollectorWithDimensions extends MetricDatumCollector {
+    default String buildKey(final String[] dimensionKeys, final String[] dimensionValues) {
+      final StringBuilder key = new StringBuilder(32);
+      for (int i = 0; i < dimensionKeys.length; ++i) {
+        if (i > 0) key.append(", ");
+        key.append(dimensionKeys[i]).append(":").append(dimensionValues[i]);
+      }
+      return key.toString();
+    }
   }
 }

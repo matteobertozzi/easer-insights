@@ -15,35 +15,31 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
-class HistogramImplSt extends Histogram {
-  private final long[] events;
-  private long minValue;
-  private long maxValue;
-  private long sumSquares;
-  private long sum;
+import java.util.concurrent.atomic.LongAdder;
 
-  protected HistogramImplSt(final long[] bounds) {
-    super(bounds);
-    this.events = new long[bounds.length + 1];
-    this.minValue = Long.MAX_VALUE;
-    this.maxValue = Long.MIN_VALUE;
-    this.sumSquares = 0;
-    this.sum = 0;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.Counter;
+
+public class CounterImplMt implements Counter {
+  private final LongAdder counter = new LongAdder();
+  private long lastUpdate;
+
+  @Override
+  public void add(final long timestamp, final long delta) {
+    this.lastUpdate = timestamp;
+    this.counter.add(delta);
   }
 
   @Override
-  protected void add(final int boundIndex, final long value) {
-    events[boundIndex]++;
-    minValue = Math.min(minValue, value);
-    maxValue = Math.max(maxValue, value);
-    sum += value;
-    sumSquares += (value * value);
+  public void set(final long timestamp, final long value) {
+    this.lastUpdate = timestamp;
+    this.counter.reset();
+    this.counter.add(value);
   }
 
   @Override
-  public MetricDataSnapshot snapshot() {
-    return snapshot(bounds(), events, minValue, maxValue, sum, sumSquares);
+  public CounterSnapshot dataSnapshot() {
+    return new CounterSnapshot(lastUpdate, counter.sum());
   }
 }

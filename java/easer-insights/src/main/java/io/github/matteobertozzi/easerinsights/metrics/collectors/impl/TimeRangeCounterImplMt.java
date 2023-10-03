@@ -15,38 +15,44 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
-class TimeRangeCounterImplMt extends TimeRangeCounterImplSt {
+public class TimeRangeCounterImplMt extends TimeRangeCounterImplSt {
   // TODO: bring back the striped-lock implementation
-  private final ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock(true);
+  private final ReentrantLock lock = new ReentrantLock(true);
 
-  protected TimeRangeCounterImplMt(final long maxInterval, final long window, final TimeUnit unit) {
+  public TimeRangeCounterImplMt(final long maxInterval, final long window, final TimeUnit unit) {
     super(maxInterval, window, unit);
   }
 
   @Override
-  protected long add(final long timestamp, final long delta) {
-    final WriteLock lock = rwlock.writeLock();
+  public void add(final long timestamp, final long delta) {
     lock.lock();
     try {
-      return super.add(timestamp, delta);
+      super.add(timestamp, delta);
     } finally {
       lock.unlock();
     }
   }
 
   @Override
-  public TimeRangeCounterSnapshot snapshot() {
-    final ReadLock lock = rwlock.readLock();
+  public void set(final long timestamp, final long value) {
     lock.lock();
     try {
-      return super.snapshot();
+      super.set(timestamp, value);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
+  public TimeRangeCounterSnapshot dataSnapshot() {
+    lock.lock();
+    try {
+      return super.dataSnapshot();
     } finally {
       lock.unlock();
     }

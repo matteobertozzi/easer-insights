@@ -15,24 +15,28 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
-import java.util.Map;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.Counter;
 
-import io.github.matteobertozzi.easerinsights.DatumUnit;
-import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector.MetricDataSnapshot;
+public class CounterImplSt implements Counter {
+  private long counter;
+  private long lastUpdate;
 
-public interface MetricCollector {
-  int metricId();
-  String type();
+  @Override
+  public void add(final long timestamp, final long delta) {
+    this.lastUpdate = timestamp;
+    this.counter += delta;
+  }
 
-  MetricDefinition definition();
+  @Override
+  public void set(final long timestamp, final long value) {
+    this.lastUpdate = timestamp;
+    this.counter = value;
+  }
 
-  MetricSnapshot snapshot();
-
-  record MetricSnapshot (String name, Map<String, String> dimensions, String type, DatumUnit unit, String label, String help, MetricDataSnapshot data) {
-    public MetricSnapshot(final MetricDefinition definition, final String type, final MetricDataSnapshot snapshot) {
-      this(definition.name(), definition.hasDimensions() ? definition.dimensions() : null, type, definition.unit(), definition.label(), definition.help(), snapshot);
-    }
+  @Override
+  public CounterSnapshot dataSnapshot() {
+    return new CounterSnapshot(lastUpdate, counter);
   }
 }

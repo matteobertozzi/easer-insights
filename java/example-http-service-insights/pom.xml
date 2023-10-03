@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>example-http-service-insights</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.4-SNAPSHOT</version>
 
   <name>example-http-service-insights</name>
   <description>Example HTTP Service using EASER Insights</description>
@@ -33,8 +33,8 @@
   </developers>
 
   <properties>
-    <easer.insights.version>0.1.0-SNAPSHOT</easer.insights.version>
-    <netty.version>4.1.99.Final</netty.version>
+    <easer.insights.version>${project.version}</easer.insights.version>
+    <netty.version>4.1.100.Final</netty.version>
     <jackson.version>2.15.2</jackson.version>
 
     <maven.gpg.version>3.1.0</maven.gpg.version>

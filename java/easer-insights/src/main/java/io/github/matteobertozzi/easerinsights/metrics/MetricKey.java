@@ -19,20 +19,11 @@ package io.github.matteobertozzi.easerinsights.metrics;
 
 import java.util.Map;
 
-import io.github.matteobertozzi.easerinsights.DatumUnit;
-import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector.MetricDataSnapshot;
+public interface MetricKey {
+  String name();
 
-public interface MetricCollector {
-  int metricId();
-  String type();
-
-  MetricDefinition definition();
-
-  MetricSnapshot snapshot();
-
-  record MetricSnapshot (String name, Map<String, String> dimensions, String type, DatumUnit unit, String label, String help, MetricDataSnapshot data) {
-    public MetricSnapshot(final MetricDefinition definition, final String type, final MetricDataSnapshot snapshot) {
-      this(definition.name(), definition.hasDimensions() ? definition.dimensions() : null, type, definition.unit(), definition.label(), definition.help(), snapshot);
-    }
-  }
+  boolean hasDimensions();
+  String[] dimensionKeys();
+  String[] dimensionValues();
+  Map<String, String> dimensions();
 }

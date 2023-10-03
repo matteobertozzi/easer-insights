@@ -25,8 +25,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.DatumUnit;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
-import io.github.matteobertozzi.easerinsights.metrics.MetricDimensions;
+import io.github.matteobertozzi.easerinsights.metrics.MetricDimension;
+import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 
 public final class JvmDiskMetrics {
@@ -34,20 +34,20 @@ public final class JvmDiskMetrics {
 
   private final CopyOnWriteArraySet<File> dataDirs = new CopyOnWriteArraySet<>();
 
-  private final MetricCollector fdsUsage = new MetricCollector.Builder()
+  private final MaxAvgTimeRangeGauge fdsUsage = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
     .name("jvm.fds.open.count")
     .label("JVM Open FDs")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
-  private final MetricDimensions diskUsed = new MetricDimensions.Builder()
+  private final MetricDimension<MaxAvgTimeRangeGauge> diskUsed = Metrics.newCollectorWithDimensions()
     .dimensions("disk_path")
     .unit(DatumUnit.BYTES)
     .name("jvm.disk.used")
     .label("JVM Disk Used")
     .register(() -> MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
-  private final MetricDimensions diskAvail = new MetricDimensions.Builder()
+  private final MetricDimension<MaxAvgTimeRangeGauge> diskAvail = Metrics.newCollectorWithDimensions()
     .dimensions("disk_path")
     .unit(DatumUnit.BYTES)
     .name("jvm.disk.avail")
@@ -59,11 +59,11 @@ public final class JvmDiskMetrics {
   }
 
   public void collect(final long now) {
-    fdsUsage.update(now, getOpenFileDescriptorCount());
+    fdsUsage.sample(now, getOpenFileDescriptorCount());
 
     for (final File dir: dataDirs) {
-      diskAvail.get(dir.getAbsolutePath()).update(now, dir.getFreeSpace());
-      diskUsed.get(dir.getAbsolutePath()).update(now, dir.getUsableSpace());
+      diskAvail.get(dir.getAbsolutePath()).sample(now, dir.getFreeSpace());
+      diskUsed.get(dir.getAbsolutePath()).sample(now, dir.getUsableSpace());
     }
   }
 

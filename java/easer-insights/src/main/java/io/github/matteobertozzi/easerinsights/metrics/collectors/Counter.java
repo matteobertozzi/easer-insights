@@ -17,49 +17,35 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplMt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
-public abstract class Gauge implements MetricDatumCollector {
-  protected Gauge() {
-    // no-op
+public interface Counter extends CollectorCounter, MetricDatumCollector {
+  public static Counter newSingleThreaded() {
+    return new CounterImplMt();
   }
 
-  @Override
-  public String type() {
-    return "GAUGE";
+  public static Counter newMultiThreaded() {
+    return new CounterImplMt();
   }
 
-  // ==========================================================================================
-  public static Gauge newSingleThreaded() {
-    return new GaugeImplSt();
+  default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
+    return new CounterCollector(definition, this, metricId);
   }
 
-  public static Gauge newMultiThreaded() {
-    return new GaugeImplMt();
-  }
-
-  // ==========================================================================================
-  protected abstract void set(long timestamp, long value);
-
-  @Override
-  public void update(final long timestamp, final long value) {
-    set(timestamp, value);
-  }
-
-  // ==========================================================================================
-  protected static final GaugeSnapshot EMPTY_SNAPSHOT = new GaugeSnapshot(0, 0);
-  public record GaugeSnapshot (long timestamp, long value) implements MetricDataSnapshot {
+  // ====================================================================================================
+  //  Snapshot related
+  // ====================================================================================================
+  public record CounterSnapshot (long lastUpdate, long value) implements MetricDataSnapshot {
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
-      if (timestamp == 0) return report.append("(no data)\n");
-
-      final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
-
-      report.append(DatumUnitConverter.humanDateFromEpochMillis(timestamp));
-      report.append(": ");
-      report.append(unitConverter.asHumanString(value));
+      final DatumUnitConverter converter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      report.append(converter.asHumanString(value)).append(" lastUpdated: ").append(DatumUnitConverter.humanDateFromEpochMillis(lastUpdate));
+      report.append("\n");
       return report;
     }
   }

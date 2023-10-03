@@ -24,22 +24,43 @@ the code should be trivial and easy to read.
 
 ```java
 // Declare the Metrics to collect
-MetricCollector reqCount = new MetricCollector.Builder()
+TimeRangeCounter reqCount = new MetricCollector.Builder()
   .unit(DatumUnit.COUNT)
   .name("http_req_count")
   .label("HTTP Request Count")
   .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-MetricDimensions execTime = new MetricDimensions.Builder()
+CounterMap reqMap = Metrics.newCollector()
+  .unit(DatumUnit.COUNT)
+  .name("http_req_map")
+  .label("HTTP Request Map")
+  .register(CounterMap.newMultiThreaded());
+
+MaxAvgTimeRangeGauge execTime = Metrics.newCollector()
+  .unit(DatumUnit.MILLISECONDS)
+  .name("http_exec_time")
+  .label("HTTP Exec Time")
+  .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
+TopK topExecTime = Metrics.newCollector()
+  .unit(DatumUnit.MILLISECONDS)
+  .name("http_top_exec_time")
+  .label("HTTP Top Exec Time")
+  .register(TopK.newMultiThreaded(10, 60, 10, TimeUnit.MINUTES));
+
+MetricDimension<Histogram> uriExecTime = Metrics.newCollectorWithDimensions()
   .dimensions("uri")
   .unit(DatumUnit.MILLISECONDS)
   .name("http_endpoint_exec_time")
-  .label("HTTP Exec Time")
+  .label("HTTP Endpoint Exec Time")
   .register(() -> Histogram.newMultiThreaded(Histogram.DEFAULT_BOUNDS_TIME_MS));
 
 // Collect the new measurements
-reqCount.update(1);
-execTime.get("/foo").update(123);
+reqCount.inc();
+reqMap.inc("/foo");
+execTime.sample(123);
+topExecTime.sample("/foo", 123);
+uriExecTime.get("/foo").sample(123);
 ```
 
 ### JSON metrics
@@ -59,34 +80,46 @@ and a **label** and the **help** to let the user know what is looking at. The da
 Each metric type may be its own data format to provide a more compact version of the data.
 ```
 "time_range_counter_data": {
-  "window": window_msec,
-  "last_interval": timestamp_msec,
+  "window": window msec,
+  "last_interval": timestamp msec,
   "counters": [...data...]
 }
 
 "max_and_avg_time_range_gauge_data": {
-  "window": window_nanosec,
-  "last_interval": timestamp_nanosec,
-  "events": {
-    "avg": [...avg data...],
-    "max": [...max data...],
-    "sum": [...sum data...]
-  }
+  "window": window msec,
+  "last_interval": timestamp msec,
+  "max": [...max data...],
+  "sum": [...sum data...]
+  "count": [...avg data...],
 }
 
 "histogram_data": {
   "bounds': [...bounds...],
   "events": [...events...],
-  "num_events": total_event_count,
-  "min_value": bound_min_value,
+  "num_events": total event count,
+  "min_value": bound min value,
+  "sum": Events sum,
+  "sum_squares": events sum squares
 }
 
-"top_k_data": [
-  { key: ..., max_ts: ..., min: ..., max: ..., avg: ..., freq: ..., trace_ids: []}
-]
+"top_k_data": {
+  entries: [
+    {
+      key: measure key,
+      max_timestamp: max value timestamp,
+      max_value: max value,
+      min_value: min value,
+      sum: events sum,
+      sum_squares: events sum squares,
+      count: num events,
+      trace_ids: [...top-k trace ids...]
+    }
+  ]
+}
 
 "counter_map_data": {
-  key: count
+  keys: [...]
+  values: [...]
 }
 ```
 

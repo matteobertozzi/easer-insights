@@ -22,12 +22,17 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferWriter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollectorRegistry;
+import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
 import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
+
 final class EaserInsightsExporterQueue {
+  private static final Logger LOGGER = Logger.getLogger("EaserInsightsExporterQueue");
+
   private final LinkedTransferQueue<byte[]> datumBuffers = new LinkedTransferQueue<>();
   private final CopyOnWriteArrayList<EaserInsightsExporter.DatumBufferFlusher> datumBufferListeners = new CopyOnWriteArrayList<>();
   private final DatumBufferWriter bufferWriter = DatumBuffer.newWriter(1000, 8192, datumBuffers::add);
@@ -65,22 +70,43 @@ final class EaserInsightsExporterQueue {
     }
   }
 
+  private void forceDatumBufferFlush() {
+    lock.lock();
+    try {
+      bufferWriter.flush();
+    } finally {
+      lock.unlock();
+    }
+  }
+
   public void subscribeToDatumBuffer(final EaserInsightsExporter.DatumBufferFlusher flusher) {
     if (!isListeningOnMetrics) {
       isListeningOnMetrics = true;
-      MetricCollectorRegistry.INSTANCE.registerMetricDatumUpdateNotifier(this::newMetricDatumCollected);
+      MetricsRegistry.INSTANCE.registerMetricDatumUpdateNotifier(this::newMetricDatumCollected);
     }
 
     datumBufferListeners.add(flusher);
   }
 
   private void datumBufferFlusher() {
+    long lastFlushNs = System.nanoTime();
     while (running.get()) {
-      final byte[] page = ThreadUtil.poll(datumBuffers, 1, TimeUnit.SECONDS);
-      if (page == null) continue;
+      try {
+        final byte[] page = ThreadUtil.poll(datumBuffers, 1, TimeUnit.SECONDS);
+        if (page == null) {
+          if ((System.nanoTime() - lastFlushNs) > TimeUnit.MINUTES.toNanos(1)) {
+            lastFlushNs = System.nanoTime();
+            forceDatumBufferFlush();
+          }
+          continue;
+        }
 
-      for (final EaserInsightsExporter.DatumBufferFlusher flusher: datumBufferListeners) {
-        flusher.datumBufferFlushAsync(page);
+        lastFlushNs = System.nanoTime();
+        for (final EaserInsightsExporter.DatumBufferFlusher flusher: datumBufferListeners) {
+          flusher.datumBufferFlushAsync(page);
+        }
+      } catch (final Throwable e) {
+        LOGGER.log(Level.SEVERE, "failure while flushing export buffer", e);
       }
     }
   }

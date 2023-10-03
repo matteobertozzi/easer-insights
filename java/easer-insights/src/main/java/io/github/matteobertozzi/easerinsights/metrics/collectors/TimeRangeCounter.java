@@ -19,21 +19,15 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeCounterCollector;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeCounterImplMt;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeCounterImplSt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
-public abstract class TimeRangeCounter implements MetricDatumCollector {
-  protected TimeRangeCounter() {
-    // no-op
-  }
-
-  @Override
-  public String type() {
-    return "TIME_RANGE_COUNTER";
-  }
-
-  // ==========================================================================================
+public interface TimeRangeCounter extends CollectorCounter, MetricDatumCollector {
   public static TimeRangeCounter newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new TimeRangeCounterImplSt(maxInterval, window, unit);
   }
@@ -42,17 +36,16 @@ public abstract class TimeRangeCounter implements MetricDatumCollector {
     return new TimeRangeCounterImplMt(maxInterval, window, unit);
   }
 
-  // ==========================================================================================
-  protected abstract long add(long timestamp, long delta);
-
-  @Override
-  public void update(final long timestamp, final long value) {
-    add(timestamp, value);
+  default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
+    return new TimeRangeCounterCollector(definition, this, metricId);
   }
 
-  // ==========================================================================================
-  protected static final TimeRangeCounterSnapshot EMPTY_SNAPSHOT = new TimeRangeCounterSnapshot(0, 0, new long[0]);
+  // ====================================================================================================
+  //  Snapshot related
+  // ====================================================================================================
   public record TimeRangeCounterSnapshot (long lastInterval, long window, long[] counters) implements MetricDataSnapshot {
+    public static final TimeRangeCounterSnapshot EMPTY_SNAPSHOT = new TimeRangeCounterSnapshot(0, 0, new long[0]);
+
     public long getFirstInterval() {
       return lastInterval - (counters.length * window);
     }

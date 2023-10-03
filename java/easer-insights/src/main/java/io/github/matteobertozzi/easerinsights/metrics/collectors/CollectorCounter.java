@@ -17,22 +17,21 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-class GaugeImplSt extends Gauge{
-  private long timestamp;
-  private long value;
+import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 
-  GaugeImplSt() {
-    super();
-  }
+public interface CollectorCounter extends CollectorGauge {
+  // 00 inc
+  // 01 dec
+  // 10 add <value>
+  // 11 set <value>
+  void add(long timestamp, long delta);
+  void set(long timestamp, long value);
 
-  @Override
-  protected void set(final long timestamp, final long value) {
-    this.timestamp = timestamp;
-    this.value = value;
-  }
-
-  @Override
-  public GaugeSnapshot snapshot() {
-    return new GaugeSnapshot(timestamp, value);
-  }
+  default void inc() { add(TimeUtil.currentEpochMillis(), 1); }
+  default void dec() { add(TimeUtil.currentEpochMillis(), -1); }
+  default void inc(final long timestamp) { add(timestamp, 1); }
+  default void dec(final long timestamp) { add(timestamp, -1); }
+  default void add(final long delta) { add(TimeUtil.currentEpochMillis(), delta); }
+  default void set(final long value) { set(TimeUtil.currentEpochMillis(), value); }
+  default void sample(final long timestamp, final long value) { set(timestamp, value); }
 }

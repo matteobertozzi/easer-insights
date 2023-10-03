@@ -29,24 +29,31 @@ import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
 
 import io.github.matteobertozzi.easerinsights.DatumUnit;
-import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.Metrics;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.CounterMap;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.util.TimeUtil;
 
 public final class JvmGcMetrics {
   public static final JvmGcMetrics INSTANCE = new JvmGcMetrics();
 
-  private final MetricCollector gcCurrentPhaseDuration = new MetricCollector.Builder()
+  private final MaxAvgTimeRangeGauge gcCurrentPhaseDuration = Metrics.newCollector()
     .unit(DatumUnit.MILLISECONDS)
     .name("jvm.gc.current.phase.duration")
     .label("JVM GC Current Phase Duration")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
-  private final MetricCollector gcPauseDuration = new MetricCollector.Builder()
+  private final MaxAvgTimeRangeGauge gcPauseDuration = Metrics.newCollector()
     .unit(DatumUnit.MILLISECONDS)
     .name("jvm.gc.pause.duration")
     .label("JVM GC Pause Duration")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
+
+  private final CounterMap gcPhaseCause = Metrics.newCollector()
+      .unit(DatumUnit.COUNT)
+      .name("jvm.gc.phase.cause")
+      .label("JVM GC Phase Cause")
+      .register(CounterMap.newMultiThreaded());
 
   private JvmGcMetrics() {
     registerListeners();
@@ -65,12 +72,11 @@ public final class JvmGcMetrics {
     final GcInfo gcInfo = notification.getGcInfo();
 
     final long now = TimeUtil.currentEpochMillis();
+    gcPhaseCause.inc(notification.getGcName() + ": " + notification.getGcCause(), now);
     if (isConcurrentPhase(notification.getGcCause(), notification.getGcName())) {
-      gcCurrentPhaseDuration.update(now, gcInfo.getDuration());
-      //gcCurrentPhase.add(now, gcInfo.getDuration());
+      gcCurrentPhaseDuration.sample(now, gcInfo.getDuration());
     } else {
-      gcPauseDuration.update(now, gcInfo.getDuration());
-      //gcPause.add(now, gcInfo.getDuration());
+      gcPauseDuration.sample(now, gcInfo.getDuration());
     }
   }
 

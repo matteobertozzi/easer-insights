@@ -50,6 +50,9 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.cors.CorsConfig;
+import io.netty.handler.codec.http.cors.CorsConfigBuilder;
+import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AsciiString;
@@ -144,10 +147,13 @@ public final class HttpServer {
   }
 
   private static class DemoHttpServerInitializer extends ChannelInitializer<SocketChannel> {
+    private static final CorsConfig CORS_CONFIG = CorsConfigBuilder.forAnyOrigin().allowNullOrigin().allowCredentials().build();
+
     @Override
     public void initChannel(final SocketChannel ch) {
       final ChannelPipeline p = ch.pipeline();
       p.addLast(new HttpServerCodec());
+      p.addLast(new CorsHandler(CORS_CONFIG));
       p.addLast(new HttpContentCompressor());
       p.addLast(new HttpObjectAggregator(1 << 20));
       p.addLast(new DemoHttpServerHandler());

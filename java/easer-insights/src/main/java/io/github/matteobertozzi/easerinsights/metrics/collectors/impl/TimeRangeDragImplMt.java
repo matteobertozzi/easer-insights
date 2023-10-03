@@ -15,37 +15,36 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
-class HistogramImplMt extends HistogramImplSt {
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter.TimeRangeCounterSnapshot;
+
+public class TimeRangeDragImplMt extends TimeRangeDragImplSt {
   // TODO: bring back the striped-lock implementation
-  private final ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock(true);
+  private final ReentrantLock lock = new ReentrantLock(true);
 
-  protected HistogramImplMt(final long[] bounds) {
-    super(bounds);
+  public TimeRangeDragImplMt(final long maxInterval, final long window, final TimeUnit unit) {
+    super(maxInterval, window, unit);
   }
 
   @Override
-  protected void add(final int boundIndex, final long value) {
-    final WriteLock lock = rwlock.writeLock();
+  public void add(final long timestamp, final long delta) {
     lock.lock();
     try {
-      super.add(boundIndex, value);
+      super.add(timestamp, delta);
     } finally {
       lock.unlock();
     }
   }
 
   @Override
-  public MetricDataSnapshot snapshot() {
-    final ReadLock lock = rwlock.readLock();
+  public TimeRangeCounterSnapshot dataSnapshot() {
     lock.lock();
     try {
-      return super.snapshot();
+      return super.dataSnapshot();
     } finally {
       lock.unlock();
     }
