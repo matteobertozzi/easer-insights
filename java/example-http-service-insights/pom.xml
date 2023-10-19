@@ -35,7 +35,7 @@
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
     <netty.version>4.1.100.Final</netty.version>
-    <jackson.version>2.15.2</jackson.version>
+    <jackson.version>2.15.3</jackson.version>
 
     <maven.gpg.version>3.1.0</maven.gpg.version>
     <maven.jar.version>3.3.0</maven.jar.version>
