@@ -95,19 +95,21 @@
       const firstTs = lastInterval - (window * count);
       for (let i = 0; i < count; i++) {
         const d = new Date(firstTs + (i * window));
-        items.push(d.getHours() + ':' + d.getMinutes());
+        const m = d.getMinutes();
+        items.push(d.getHours() + ':' + (m > 10 ? m : '0' + m));
       }
       return items;
     }
 
     function renderTimeRangeCounter(metric) {
+      const metricData = metric.data;
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       newChart(metric.name, metric.label, {
         grid: { left: 50, top: 15, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
-          data: buildDateTimeLabels(metric.data.lastInterval, metric.data.window, metric.data.counters.length)
+          data: buildDateTimeLabels(metricData.lastInterval, metricData.window, metricData.counters.length)
         },
         yAxis: {
           type: 'value',
@@ -119,7 +121,7 @@
           axisPointer: { type: 'shadow' },
           formatter: (data) => {
             let text = metric.label + '<br>';
-            text += new Date(metric.data.lastInterval - ((metric.data.counters.length - data[0].dataIndex) * metric.data.window)).toLocaleString();
+            text += new Date(metricData.lastInterval - ((metricData.counters.length - data[0].dataIndex) * metricData.window)).toLocaleString();
             for (let i = 0; i < data.length; ++i) {
               const v = data[i];
               text += '<br>' + v.marker + v.seriesName + ": " + humanConverter(v.value);
@@ -129,19 +131,20 @@
         },
         dataZoom: [{ show: true, realtime: true, height: 14, bottom: 10, textStyle: { fontSize: 8 } }],
         series: [
-          { type: 'bar', name: metric.name, data: metric.data.counters }
+          { type: 'bar', name: metric.name, data: metricData.counters }
         ]
       });
     }
 
     function renderMaxAvgTimeRangeGauge(metric) {
+      const metricData = metric.data;
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       newChart(metric.name, metric.label, {
         grid: { left: 50, top: 15, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
-          data: buildDateTimeLabels(metric.data.lastInterval, metric.data.window, metric.data.count.length)
+          data: buildDateTimeLabels(metricData.lastInterval, metricData.window, metricData.count.length)
         },
         yAxis: {
           type: 'value',
@@ -153,7 +156,7 @@
           axisPointer: { type: 'shadow' },
           formatter: (data) => {
             let text = metric.label + '<br>';
-            text += new Date(metric.data.lastInterval - ((metric.data.count.length - data[0].dataIndex) * metric.data.window)).toLocaleString();
+            text += new Date(metricData.lastInterval - ((metricData.count.length - data[0].dataIndex) * metricData.window)).toLocaleString();
             for (let i = 0; i < data.length; ++i) {
               const v = data[i];
               text += '<br>' + v.marker + v.seriesName + ": " + humanConverter(v.value);
@@ -175,7 +178,7 @@
               ])
             },
             emphasis: { focus: 'series' },
-            data: metric.data.max
+            data: metricData.max
           },
           {
             name: 'avg',
@@ -193,7 +196,7 @@
               ])
             },
             emphasis: { focus: 'series' },
-            data: metric.data.count.map((v, index) => (v > 0) ? (metric.data.sum[index] / v) : 0)
+            data: metricData.count.map((v, index) => (v > 0) ? (metricData.sum[index] / v) : 0)
           },
         ]
       });
@@ -235,6 +238,82 @@
         },
         series: [
           { type: 'bar', name: metric.name, data: metricData.events }
+        ]
+      });
+    }
+
+    function renderHeatmap(metric) {
+      // { lastInterval, window, bounds, events: [...] }
+      const metricData = metric.data;
+      if (!metricData.bounds || metricData.bounds.length == 0) {
+        console.debug('no data for metric', metric.name);
+        return;
+      }
+
+      const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
+      const bounds = metricData.bounds.map(v => humanConverter(v));
+
+      let maxEvents = 0;
+      const data = [];
+      const events = metricData.events;
+      const numIntervals = events.length / bounds.length;
+      for (let i = 0; i < events.length; ++i) {
+        const x = Math.trunc(i / bounds.length);
+        const y = i % bounds.length;
+        data.push([x, y, events[i] || '-']);
+        maxEvents = Math.max(maxEvents, events[i] || 0);
+      }
+
+      newChart(metric.name, metric.label, {
+        grid: { left: 50, top: 5, right: 5, bottom: 40 },
+        tooltip: {
+          position: 'bottom',
+          formatter: (data) => {
+            const dateText = new Date(metricData.lastInterval - ((numIntervals - data.value[0]) * metricData.window)).toLocaleString();
+            return metric.label + ': ' + dateText + '<br>' + bounds[data.value[1]] + ': <b>' + humanCount(data.value[2]) + '</b>';
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: buildDateTimeLabels(metricData.lastInterval, metricData.window, numIntervals),
+          axisLabel: { fontSize: 8 },
+          splitArea: { show: true }
+        },
+        yAxis: {
+          type: 'category',
+          data: bounds,
+          axisLabel: { fontSize: 8 },
+          splitArea: { show: true }
+        },
+        visualMap: {
+          formatter: (a, b) => humanCount(a) + '-' + humanCount(b),
+          textStyle: { fontSize: 8 },
+          type: 'piecewise',
+          orient: 'horizontal',
+          left: 'center',
+          min: 0,
+          max: maxEvents,
+          calculable: true,
+          itemGap: 8,
+          textGap: 3,
+          bottom: 0,
+        },
+        series: [
+          {
+            name: metric.label,
+            type: 'heatmap',
+            data: data,
+            label: { show: true, fontSize: 5, formatter: v => humanCount(v.value[2]) },
+            itemStyle: { borderWidth: 0.5, borderColor: '#888' },
+            emphasis: {
+              itemStyle: {
+                borderColor: '#333',
+                borderWidth: 1,
+                shadowBlur: 10,
+                shadowColor: 'rgba(0, 0, 0, 0.5)'
+              }
+            }
+          }
         ]
       });
     }
@@ -379,7 +458,7 @@
       return count.toString()
     }
 
-    export function humanMillis(msec) {
+    function humanMillis(msec) {
       if (msec < 1000) {
         return msec + "ms";
       }
@@ -433,10 +512,11 @@
       'TIME_RANGE_COUNTER': renderTimeRangeCounter,
       'MAX_AVG_TIME_RANGE_GAUGE': renderMaxAvgTimeRangeGauge,
       'HISTOGRAM': renderHistogram,
+      'HEATMAP': renderHeatmap,
       'TOPK': renderTopK,
       'COUNTER': renderCounter,
       'COUNTER_MAP': renderCounterMap,
-    }
+    };
 
     async function fetchMetrics(jsonMetricsUrl) {
       const response = await fetch(jsonMetricsUrl);
