@@ -22,20 +22,24 @@ import java.util.concurrent.TimeUnit;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter.TimeRangeCounterSnapshot;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeDragCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeDragImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeDragImplSt;
 
 public interface TimeRangeDrag extends CollectorCounter, MetricDatumCollector {
-  public static TimeRangeDrag newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+  static TimeRangeDrag newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new TimeRangeDragImplSt(maxInterval, window, unit);
   }
 
-  public static TimeRangeDrag newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+  static TimeRangeDrag newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new TimeRangeDragImplMt(maxInterval, window, unit);
   }
 
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new TimeRangeDragCollector(definition, this, metricId);
   }
+
+  @Override TimeRangeCounterSnapshot dataSnapshot();
 }

@@ -44,6 +44,7 @@ public class TimeRange {
 
   public void copy(final int slotsCount, final int length, final CopySlots copyFunc) {
     final int eofIndex = 1 + (int) (next % slotsCount);
+    //System.out.println(" ---> COPY - next:" + next + " length:" + length + " eofIndex:" + eofIndex);
     if (next >= length) {
       // 5, 6, 7, 8, 1, 2, 3, 4
       copyFunc.copy(0, eofIndex, slotsCount);
@@ -121,8 +122,8 @@ public class TimeRange {
     final int slots = (int) (deltaTime / window);
     if (slots >= totalSlots) {
       //System.out.println(" ----> clear");
-      resetFunc.reset(0, totalSlots - 1);
-      next = 0;
+      resetFunc.reset(0, totalSlots);
+      next += slots;
       return;
     }
 

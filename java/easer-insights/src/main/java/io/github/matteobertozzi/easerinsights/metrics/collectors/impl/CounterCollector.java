@@ -48,7 +48,7 @@ public class CounterCollector implements MetricCollector, Counter {
   }
 
   @Override
-  public MetricDataSnapshot dataSnapshot() {
+  public CounterSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 

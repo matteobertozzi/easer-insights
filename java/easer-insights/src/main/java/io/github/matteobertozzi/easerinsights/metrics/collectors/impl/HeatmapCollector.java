@@ -20,47 +20,40 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter.TimeRangeCounterSnapshot;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeDrag;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.Heatmap;
 
-public class TimeRangeDragCollector implements MetricCollector, TimeRangeDrag {
+public class HeatmapCollector implements MetricCollector, Heatmap {
   private final MetricDefinition definition;
-  private final TimeRangeDrag collector;
+  private final Heatmap collector;
   private final int metricId;
 
-  public TimeRangeDragCollector(final MetricDefinition definition, final TimeRangeDrag collector, final int metricId) {
+  public HeatmapCollector(final MetricDefinition definition, final Heatmap collector, final int metricId) {
     this.definition = definition;
     this.collector = collector;
     this.metricId = metricId;
   }
 
   @Override
-  public void add(final long timestamp, final long delta) {
-    collector.add(timestamp, delta);
-
-    MetricsRegistry.INSTANCE.notifyDatumUpdate(this, MetricDatumUpdateType.DELTA, timestamp, delta);
-  }
-
-  @Override
-  public void set(final long timestamp, final long value) {
-    collector.set(timestamp, value);
+  public void sample(final long timestamp, final long value) {
+    collector.sample(timestamp, value);
 
     MetricsRegistry.INSTANCE.notifyDatumUpdate(this, MetricDatumUpdateType.SAMPLE, timestamp, value);
+    //MetricsRegistry.INSTANCE.notifyDatumUpdate(this, bounds[boundIndex], MetricDatumUpdateType.SAMPLE, value);
   }
 
   @Override
-  public TimeRangeCounterSnapshot dataSnapshot() {
+  public String type() {
+    return "HEATMAP";
+  }
+
+  @Override
+  public HeatmapSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 
   @Override
   public int metricId() {
     return metricId;
-  }
-
-  @Override
-  public String type() {
-    return "TIME_RANGE_COUNTER";
   }
 
   @Override

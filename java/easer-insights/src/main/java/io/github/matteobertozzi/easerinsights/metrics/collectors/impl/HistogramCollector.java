@@ -47,7 +47,7 @@ public class HistogramCollector implements MetricCollector, Histogram {
   }
 
   @Override
-  public MetricDataSnapshot dataSnapshot() {
+  public HistogramSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 

@@ -40,6 +40,7 @@ public class MetricDimension<T extends MetricDatumCollector> {
     this.help = help;
   }
 
+  @SuppressWarnings("unchecked")
   public T get(final String... dimensions) {
     if (dimensions == null || dimensions.length != dimensionKeys.length) {
       throw new IllegalArgumentException("expected " + dimensionKeys.length + " dimensions: " + Arrays.toString(dimensionKeys));

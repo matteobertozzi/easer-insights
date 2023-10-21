@@ -96,13 +96,14 @@ public class TimeRangeDragImplSt implements TimeRangeDrag {
     final int availSlots = (int) Math.min(next + 1, counters.length);
     final int pastIndex = (int) (-deltaTime / window);
     if (pastIndex >= availSlots) {
-      // ignore, too far in the past
-      return;
-    }
-
-    long index = next - pastIndex;
-    while (index <= next) {
-      counters[(int)(index++ % counters.length)] += delta;
+      for (int i = 0; i < counters.length; ++i) {
+        counters[i] += delta;
+      }
+    } else {
+      long index = next - pastIndex;
+      while (index <= next) {
+        counters[(int)(index++ % counters.length)] += delta;
+      }
     }
   }
 
@@ -111,7 +112,7 @@ public class TimeRangeDragImplSt implements TimeRangeDrag {
     final int slots = (int) (deltaTime / window);
     if (slots >= counters.length) {
       Arrays.fill(counters, currentValue);
-      next = 0;
+      next += slots;
       return;
     }
 

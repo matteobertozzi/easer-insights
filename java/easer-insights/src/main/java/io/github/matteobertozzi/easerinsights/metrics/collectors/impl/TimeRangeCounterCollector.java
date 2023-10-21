@@ -48,7 +48,7 @@ public class TimeRangeCounterCollector implements MetricCollector, TimeRangeCoun
   }
 
   @Override
-  public MetricDataSnapshot dataSnapshot() {
+  public TimeRangeCounterSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 

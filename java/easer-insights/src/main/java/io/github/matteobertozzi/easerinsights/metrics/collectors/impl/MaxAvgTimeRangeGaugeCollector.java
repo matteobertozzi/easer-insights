@@ -41,7 +41,7 @@ public class MaxAvgTimeRangeGaugeCollector implements MetricCollector, MaxAvgTim
   }
 
   @Override
-  public MetricDataSnapshot dataSnapshot() {
+  public MaxAvgTimeRangeGaugeSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 

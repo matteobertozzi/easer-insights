@@ -34,6 +34,7 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricDimension;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.CounterMap;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.Heatmap;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
@@ -67,6 +68,12 @@ public final class DemoMain {
     .name("http_exec_time")
     .label("HTTP Exec Time")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
+  private static final Heatmap execTimeHeatmap = Metrics.newCollector()
+    .unit(DatumUnit.MILLISECONDS)
+    .name("http_exec_time_heatmap")
+    .label("HTTP Exec Time")
+    .register(Heatmap.newMultiThreaded(60, 1, TimeUnit.MINUTES, Histogram.DEFAULT_DURATION_BOUNDS_MS));
 
   private static final TopK topExecTime = Metrics.newCollector()
     .unit(DatumUnit.MILLISECONDS)
@@ -115,6 +122,7 @@ public final class DemoMain {
         final StringBuilder report = new StringBuilder();
         report.append("path: ").append(query.path()).append("\n");
         report.append("params: ").append(query.parameters()).append("\n");
+        Thread.sleep(Math.round(Math.random() * 250));
         HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.NOT_FOUND, HttpHeaderValues.TEXT_PLAIN, report.toString().getBytes(StandardCharsets.UTF_8));
       }
     ), (req, query, resp, elapsedMs) -> {
@@ -122,6 +130,7 @@ public final class DemoMain {
       reqCount.inc(now);
       reqMap.inc(query.path(), now);
       execTime.sample(now, elapsedMs);
+      execTimeHeatmap.sample(now, elapsedMs);
       topExecTime.sample(query.path(), now, elapsedMs);
       uriExecTime.get(query.path()).sample(now, elapsedMs);
     });

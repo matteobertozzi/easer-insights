@@ -38,6 +38,7 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
     return new TopKImplMt(k, maxInterval, window, unit);
   }
 
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new TopKCollector(definition, this, metricId);
   }
@@ -45,7 +46,9 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
   // ====================================================================================================
   //  Snapshot related
   // ====================================================================================================
-  public record TopEntrySnapshot (String key, long maxTimestamp, long maxValue, long minValue, long sum, long sumSquares, long count) {
+  @Override TopKSnapshot dataSnapshot();
+
+  record TopEntrySnapshot (String key, long maxTimestamp, long maxValue, long minValue, long sum, long sumSquares, long count) {
     public double average() {
       if (count == 0) return 0;
       return (double) sum / count;
@@ -64,7 +67,7 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
     }
   }
 
-  public record TopKSnapshot (TopEntrySnapshot[] entries) implements MetricDataSnapshot {
+  record TopKSnapshot (TopEntrySnapshot[] entries) implements MetricDataSnapshot {
     public static final TopKSnapshot EMPTY_SNAPSHOT = new TopKSnapshot(new TopEntrySnapshot[0]);
 
     private static final List<String> HEADER = List.of("", "Max Timestamp", "Max", "Min", "Avg", "StdDev", "Freq");

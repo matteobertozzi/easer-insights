@@ -22,17 +22,19 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplMt;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplSt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
 public interface Counter extends CollectorCounter, MetricDatumCollector {
-  public static Counter newSingleThreaded() {
+  static Counter newSingleThreaded() {
+    return new CounterImplSt();
+  }
+
+  static Counter newMultiThreaded() {
     return new CounterImplMt();
   }
 
-  public static Counter newMultiThreaded() {
-    return new CounterImplMt();
-  }
-
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new CounterCollector(definition, this, metricId);
   }
@@ -40,7 +42,9 @@ public interface Counter extends CollectorCounter, MetricDatumCollector {
   // ====================================================================================================
   //  Snapshot related
   // ====================================================================================================
-  public record CounterSnapshot (long lastUpdate, long value) implements MetricDataSnapshot {
+  @Override CounterSnapshot dataSnapshot();
+
+  record CounterSnapshot (long lastUpdate, long value) implements MetricDataSnapshot {
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
       final DatumUnitConverter converter = DatumUnitConverter.humanConverter(metricDefinition.unit());

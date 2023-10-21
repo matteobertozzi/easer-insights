@@ -28,14 +28,15 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeC
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
 public interface TimeRangeCounter extends CollectorCounter, MetricDatumCollector {
-  public static TimeRangeCounter newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+  static TimeRangeCounter newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new TimeRangeCounterImplSt(maxInterval, window, unit);
   }
 
-  public static TimeRangeCounter newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+  static TimeRangeCounter newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new TimeRangeCounterImplMt(maxInterval, window, unit);
   }
 
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new TimeRangeCounterCollector(definition, this, metricId);
   }
@@ -43,7 +44,9 @@ public interface TimeRangeCounter extends CollectorCounter, MetricDatumCollector
   // ====================================================================================================
   //  Snapshot related
   // ====================================================================================================
-  public record TimeRangeCounterSnapshot (long lastInterval, long window, long[] counters) implements MetricDataSnapshot {
+  @Override TimeRangeCounterSnapshot dataSnapshot();
+
+  record TimeRangeCounterSnapshot (long lastInterval, long window, long[] counters) implements MetricDataSnapshot {
     public static final TimeRangeCounterSnapshot EMPTY_SNAPSHOT = new TimeRangeCounterSnapshot(0, 0, new long[0]);
 
     public long getFirstInterval() {

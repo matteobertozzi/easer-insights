@@ -449,18 +449,18 @@
       if (size >= 1073741824) return (size / 1073741824).toFixed(2) + 'GiB';
       if (size >= 1048576) return (size / 1048576).toFixed(2) + 'MiB';
       if (size >= 1024) return (size / 1024).toFixed(2) + 'KiB';
-      return (size > 0) ? size + 'bytes' : '0';
+      return (size > 0) ? Math.round(size) + 'bytes' : '0';
     }
 
     function humanCount(count) {
       if (count >= 1000000) return (count / 1000000).toFixed(2) + 'M';
       if (count >= 1000) return (count / 1000).toFixed(2) + 'K';
-      return count.toString()
+      return Math.round(count).toString()
     }
 
     function humanMillis(msec) {
       if (msec < 1000) {
-        return msec + "ms";
+        return Math.round(msec) + "ms";
       }
 
       const hours = Math.floor(msec / (60 * 60 * 1000));

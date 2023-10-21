@@ -24,13 +24,14 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramC
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplSt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.easerinsights.util.StatisticsUtil;
 
 public interface Histogram extends CollectorGauge, MetricDatumCollector {
-  public static Histogram newSingleThreaded(final long[] bounds) {
+  static Histogram newSingleThreaded(final long[] bounds) {
     return new HistogramImplSt(bounds);
   }
 
-  public static Histogram newMultiThreaded(final long[] bounds) {
+  static Histogram newMultiThreaded(final long[] bounds) {
     return new HistogramImplMt(bounds);
   }
 
@@ -38,6 +39,7 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
     return new HistogramCollector(definition, histogram, metricId);
   }
 
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new HistogramCollector(definition, this, metricId);
   }
@@ -45,7 +47,9 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
   // ====================================================================================================
   //  Snapshot related
   // ====================================================================================================
-  public record HistogramSnapshot(long[] bounds, long[] events, long numEvents, long minValue, long sum, long sumSquares) implements MetricDataSnapshot {
+  @Override HistogramSnapshot dataSnapshot();
+
+  record HistogramSnapshot(long[] bounds, long[] events, long numEvents, long minValue, long sum, long sumSquares) implements MetricDataSnapshot {
     public static final HistogramSnapshot EMPTY_SNAPSHOT = new HistogramSnapshot(new long[0], new long[0], 0, 0, 0, 0);
 
     public static HistogramSnapshot of(final long[] bounds, final long[] events,
@@ -124,69 +128,37 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
     public long maxValue() { return bounds.length != 0 ? bounds[bounds.length - 1] : 0; }
 
     public double average() {
-      if (numEvents() == 0) return 0;
-      return (double) sum() / numEvents();
+      return StatisticsUtil.average(numEvents(), sum());
     }
 
     public double standardDeviation() {
-      if (numEvents() == 0) return 0;
-
-      final double dNumEvents = numEvents();
-      final double dSum = sum();
-      final double dSumSquares = sumSquares();
-      final double variance = (dSumSquares * dNumEvents - dSum * dSum) / (dNumEvents * dNumEvents);
-      return Math.sqrt(Math.max(variance, 0.0));
+      return StatisticsUtil.standardDeviation(numEvents(), sum(), sumSquares());
     }
 
     public double median() { return percentile(50.0); }
 
     public double percentile(final double p) {
-      if (numEvents == 0) return 0;
-
-      final long maxValue = bounds[bounds.length - 1];
-
-      final double threshold = numEvents() * (p / 100.0);
-      long cumulativeSum = 0;
-      for (int b = 0; b < bounds.length; b++) {
-        final long bucketValue = events[b];
-        cumulativeSum += bucketValue;
-        if (cumulativeSum >= threshold) {
-          // Scale linearly within this bucket
-          final long leftPoint = (b == 0) ? minValue : bounds[b - 1];
-          final long rightPoint = bounds[b];
-          final long leftSum = cumulativeSum - bucketValue;
-          double pos = 0;
-          final long rightLeftDiff = cumulativeSum - leftSum;
-          if (rightLeftDiff != 0) {
-            pos = (threshold - leftSum) / rightLeftDiff;
-          }
-          double r = leftPoint + (rightPoint - leftPoint) * pos;
-          if (r < minValue) r = minValue;
-          if (r > maxValue) r = maxValue;
-          return r;
-        }
-      }
-      return maxValue;
+      return StatisticsUtil.percentile(p, bounds(), minValue(), maxValue(), numEvents(), events, 0);
     }
   }
 
   // ====================================================================================================
   //  Default Bounds
   // ====================================================================================================
-  public static final long[] DEFAULT_DURATION_BOUNDS_MS = new long[] {
+  long[] DEFAULT_DURATION_BOUNDS_MS = new long[] {
     5, 10, 25, 50, 75, 100, 150, 250, 350, 500, 750,  // msec
     1000, 2500, 5000, 10000, 25000, 50000, 60000,     // sec
     75000, 120000,                                    // min
   };
 
-  public static final long[] DEFAULT_SMALL_DURATION_BOUNDS_NS = new long[] {
+  long[] DEFAULT_SMALL_DURATION_BOUNDS_NS = new long[] {
     25, 50, 75, 100, 500, 1_000,                                      // nsec
     10_000, 25_000, 50_000, 75_000, 100_000,                          // usec
     250_000, 500_000, 750_000,
     1_000_000, 5000000L, 10000000L, 25000000L, 50000000L, 75000000L,  // msec
   };
 
-  public static final long[] DEFAULT_DURATION_BOUNDS_NS = new long[] {
+  long[] DEFAULT_DURATION_BOUNDS_NS = new long[] {
     25, 50, 100,                                                              // nsec
     1_000, 10_000, 50_000, 100_000, 250_000, 500_000, 750_000,                // usec
     1_000_000, 5000000L, 10000000L, 25000000L, 50000000L, 75000000L,          // msec
@@ -195,20 +167,20 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
     60000000000L, 120000000000L, 300000000000L, 600000000000L, 900000000000L  // min
   };
 
-  public static final long[] DEFAULT_SIZE_BOUNDS = new long[] {
+  long[] DEFAULT_SIZE_BOUNDS = new long[] {
     0, 128, 256, 512,
     1 << 10, 2 << 10, 4 << 10, 8 << 10, 16 << 10, 32 << 10, 64 << 10, 128 << 10, 256 << 10, 512 << 10, // kb
     1 << 20, 2 << 20, 4 << 20, 8 << 20, 16 << 20, 32 << 20, 64 << 20, 128 << 20, 256 << 20, 512 << 20, // mb
   };
 
-  public static final long[] DEFAULT_SMALL_SIZE_BOUNDS = new long[] {
+  long[] DEFAULT_SMALL_SIZE_BOUNDS = new long[] {
     0, 32, 64, 128, 256, 512,
     1 << 10, 2 << 10, 4 << 10, 8 << 10, 16 << 10, 32 << 10,
     64 << 10, 128 << 10, 256 << 10, 512 << 10, // kb
     1 << 20
   };
 
-  public static final long[] DEFAULT_COUNT_BOUNDS = new long[] {
+  long[] DEFAULT_COUNT_BOUNDS = new long[] {
     0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000,
     2000, 2500, 5000, 10_000, 15_000, 20_000, 25_000,
     50_000, 75_000, 100_000, 250_000, 500_000, 1_000_000

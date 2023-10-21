@@ -48,7 +48,7 @@ public class CounterMapCollector implements MetricCollector, CounterMap {
   }
 
   @Override
-  public MetricDataSnapshot dataSnapshot() {
+  public CounterMapSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 

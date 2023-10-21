@@ -28,14 +28,15 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTime
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
 
 public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollector {
-  public static MaxAvgTimeRangeGauge newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+  static MaxAvgTimeRangeGauge newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new MaxAvgTimeRangeGaugeImplSt(maxInterval, window, unit);
   }
 
-  public static MaxAvgTimeRangeGauge newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+  static MaxAvgTimeRangeGauge newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
     return new MaxAvgTimeRangeGaugeImplMt(maxInterval, window, unit);
   }
 
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new MaxAvgTimeRangeGaugeCollector(definition, this, metricId);
   }
@@ -43,7 +44,9 @@ public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollect
   // ====================================================================================================
   //  Snapshot related
   // ====================================================================================================
-  public record MaxAvgTimeRangeGaugeSnapshot (long lastInterval, long window, long[] count, long[] sum, long[] max) implements MetricDataSnapshot {
+  @Override MaxAvgTimeRangeGaugeSnapshot dataSnapshot();
+
+  record MaxAvgTimeRangeGaugeSnapshot (long lastInterval, long window, long[] count, long[] sum, long[] max) implements MetricDataSnapshot {
     public static final MaxAvgTimeRangeGaugeSnapshot EMPTY_SNAPSHOT = new MaxAvgTimeRangeGaugeSnapshot(0, 0, new long[0], new long[0], new long[0]);
 
     public long getFirstInterval() {

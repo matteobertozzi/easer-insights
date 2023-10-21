@@ -59,7 +59,7 @@ public class MaxAvgTimeRangeGaugeImplSt implements MaxAvgTimeRangeGauge {
     final long[] count = new long[length];
     final long[] sum = new long[length];
     final long[] max = new long[length];
-    timeRange.copy(ring.length / 3, count.length, (dstIndex, srcFromIndex, srcToIndex) -> {
+    timeRange.copy(ring.length / 3, length, (dstIndex, srcFromIndex, srcToIndex) -> {
       final int copyLength = srcToIndex - srcFromIndex;
       final int ringIndex = srcFromIndex * 3;
       ArrayUtil.copyStride(count, dstIndex, ring, ringIndex, copyLength, 3);

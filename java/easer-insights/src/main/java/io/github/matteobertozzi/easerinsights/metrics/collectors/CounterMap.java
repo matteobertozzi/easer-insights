@@ -37,6 +37,7 @@ public interface CounterMap extends CollectorKeyCounter, MetricDatumCollector {
     return new CounterMapImplMt();
   }
 
+  @Override
   default MetricCollector newCollector(final MetricDefinition definition, final int metricId) {
     return new CounterMapCollector(definition, this, metricId);
   }
@@ -44,7 +45,9 @@ public interface CounterMap extends CollectorKeyCounter, MetricDatumCollector {
   // ====================================================================================================
   //  Snapshot related
   // ====================================================================================================
-  public record CounterMapSnapshot (String[] keys, long[] values) implements MetricDataSnapshot {
+  @Override CounterMapSnapshot dataSnapshot();
+
+  record CounterMapSnapshot (String[] keys, long[] values) implements MetricDataSnapshot {
     public static final CounterMapSnapshot EMPTY_SNAPSHOT = new CounterMapSnapshot(new String[0], new long[0]);
 
     public static CounterMapSnapshot ofUnsorted(final String[] keys, final long[] values) {

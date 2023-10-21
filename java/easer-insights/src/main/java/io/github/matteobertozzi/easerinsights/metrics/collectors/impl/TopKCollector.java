@@ -41,7 +41,7 @@ public class TopKCollector implements MetricCollector, TopK {
   }
 
   @Override
-  public MetricDataSnapshot dataSnapshot() {
+  public TopKSnapshot dataSnapshot() {
     return collector.dataSnapshot();
   }
 
