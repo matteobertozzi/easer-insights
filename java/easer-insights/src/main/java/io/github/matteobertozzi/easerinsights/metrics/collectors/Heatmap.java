@@ -17,8 +17,6 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
@@ -28,7 +26,6 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapCol
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapImplSt;
 import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
-import io.github.matteobertozzi.easerinsights.util.StatisticsUtil;
 
 public interface Heatmap extends CollectorGauge, MetricDatumCollector {
   static Heatmap newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
@@ -61,49 +58,44 @@ public interface Heatmap extends CollectorGauge, MetricDatumCollector {
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
       final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
 
-      final long lastBound = bounds[bounds.length - 1];
-      final double mult = 10.0 / lastBound;
+      long maxEvents = 0;
+      for (int i = 0; i < events.length; ++i) {
+        maxEvents = Math.max(maxEvents, events[i]);
+      }
+
+      final long e25 = Math.round(maxEvents * 0.25);
+      final long e50 = Math.round(maxEvents * 0.50);
+      final long e75 = Math.round(maxEvents * 0.75);
+      final long e90 = Math.round(maxEvents * 0.90);
+      final long e99 = Math.round(maxEvents * 0.99);
+
       final int numIntervals = events.length / bounds.length;
-      final long firstIntervalTs = lastInterval - (numIntervals * window);
-      for (int i = 0; i < numIntervals; ++i) {
-        final int offset = i * bounds.length;
-        final long intervalEvents = StatisticsUtil.sum(events, offset, bounds.length);
-        if (intervalEvents == 0) continue;
-
-        final double stdDev = StatisticsUtil.standardDeviation(intervalEvents, sum[i], sumSquares[i]);
-        final double p50 = StatisticsUtil.percentile(50, bounds, minValue[i], maxValue[i], intervalEvents, events, offset);
-        final double p75 = StatisticsUtil.percentile(75, bounds, minValue[i], maxValue[i], intervalEvents, events, offset);
-        final double p99 = StatisticsUtil.percentile(99, bounds, minValue[i], maxValue[i], intervalEvents, events, offset);
-
-        report.append(Instant.ofEpochMilli(firstIntervalTs + (i * window)).atZone(ZoneId.systemDefault()));
-        report.append(" - p50:").append(String.format("%-5s", unitConverter.asHumanString(Math.round(p50))));
-        report.append(" p75:").append(String.format("%-5s", unitConverter.asHumanString(Math.round(p75))));
-        report.append(" p99:").append(String.format("%-5s", unitConverter.asHumanString(Math.round(p99))));
-        report.append(" stdDev:").append(String.format("%-5s", unitConverter.asHumanString(Math.round(stdDev))));
-        report.append(" |");
-
-        // Add hash marks based on percentage
-        final int marks = (int) Math.round(mult * p99);
-        for (int m = 0; m < marks; ++m) report.append('#');
-        for (int m = marks; m < 11; ++m) report.append(' ');
-
-        drawBounds(report, unitConverter, i, offset);
-        report.append('\n');
+      for (int b = bounds.length - 1; b >= 0; --b) {
+        report.append(String.format("%6s |", unitConverter.asHumanString(bounds[b])));
+        for (int i = 0; i < numIntervals; ++i) {
+          final long numEvents = events[(i * bounds.length) + b];
+          if (numEvents > e25) {
+            final int perc = (int) Math.round(100 * ((double)numEvents / maxEvents));
+            report.append(" ").append(perc < 100 ? perc : "**").append(" ");
+          } else {
+            report.append(" -- ");
+          }
+        }
+        report.append("\n");
       }
+      report.append("       +");
+      for (int i = 0, n = numIntervals; i < n; ++i) {
+        report.append("----");
+      }
+      report.append("\n");
+      report.append("        25%:").append(DatumUnitConverter.humanCount(e25));
+      report.append(", 50%:").append(DatumUnitConverter.humanCount(e50));
+      report.append(", 75%:").append(DatumUnitConverter.humanCount(e75));
+      report.append(", 90%:").append(DatumUnitConverter.humanCount(e90));
+      report.append(", 99%:").append(DatumUnitConverter.humanCount(e99));
+      report.append(", max:").append(DatumUnitConverter.humanCount(maxEvents));
+      report.append("\n");
       return report;
-    }
-
-    private void drawBounds(final StringBuilder report, final DatumUnitConverter unitConverter, final int intervalIndex, int eventsOffset) {
-      report.append(unitConverter.asHumanString(minValue[intervalIndex])).append(":").append(DatumUnitConverter.humanCount(events[eventsOffset++]));
-      final long lastBound = maxValue[intervalIndex];
-      for (int b = 1; b < bounds.length && bounds[b] < lastBound; ++b) {
-        report.append(", ");
-        report.append(unitConverter.asHumanString(bounds[b])).append(":").append(DatumUnitConverter.humanCount(events[eventsOffset++]));
-      }
-      if (lastBound > minValue[intervalIndex]) {
-        report.append(", ");
-        report.append(unitConverter.asHumanString(lastBound)).append(":").append(DatumUnitConverter.humanCount(events[eventsOffset++]));
-      }
     }
   }
 }
