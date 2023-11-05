@@ -2,7 +2,7 @@
 
 n**E**bulous sm**A**ll **S**cale s**E**rvices p**R**ophecies & Insights. A Library for collecting metrics.
 
-[![license](https://img.shields.io/github/license/matteobertozzi/yajbe-data-format)](LICENSE)
+[![license](https://img.shields.io/github/license/matteobertozzi/easer-insights)](LICENSE)
 
 <img src="docs/assets/easer-insights-registry-and-exporters.png" />
 
