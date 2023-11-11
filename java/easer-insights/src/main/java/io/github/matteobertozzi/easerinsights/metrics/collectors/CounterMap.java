@@ -19,14 +19,15 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
 import java.util.Formatter;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterMapCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterMapImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterMapImplSt;
-import io.github.matteobertozzi.easerinsights.util.ArrayUtil;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.rednaco.collections.arrays.ArraySortUtil;
+import io.github.matteobertozzi.rednaco.collections.arrays.ArrayUtil;
 
 public interface CounterMap extends CollectorKeyCounter, MetricDatumCollector {
   static CounterMap newSingleThreaded() {
@@ -51,7 +52,7 @@ public interface CounterMap extends CollectorKeyCounter, MetricDatumCollector {
     public static final CounterMapSnapshot EMPTY_SNAPSHOT = new CounterMapSnapshot(new String[0], new long[0]);
 
     public static CounterMapSnapshot ofUnsorted(final String[] keys, final long[] values) {
-      ArrayUtil.sort(0, keys.length, (aIndex, bIndex) -> Long.compare(values[bIndex], values[aIndex]), (aIndex, bIndex) -> {
+      ArraySortUtil.sort(0, keys.length, (aIndex, bIndex) -> Long.compare(values[bIndex], values[aIndex]), (aIndex, bIndex) -> {
         ArrayUtil.swap(keys, aIndex, bIndex);
         ArrayUtil.swap(values, aIndex, bIndex);
       });
@@ -71,7 +72,7 @@ public interface CounterMap extends CollectorKeyCounter, MetricDatumCollector {
       final long total = totalValue();
       if (total <= 0) return report.append("(no data)\n");
 
-      final DatumUnitConverter converter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      final DatumUnitConverter converter = metricDefinition.unit().humanConverter();
       try (Formatter formatter = new Formatter(report)) {
         for (int i = 0; i < keys.length; ++i) {
           final long value = values[i];

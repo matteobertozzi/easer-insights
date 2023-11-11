@@ -32,7 +32,7 @@ import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.CounterMap;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
 public final class JvmGcMetrics {
   public static final JvmGcMetrics INSTANCE = new JvmGcMetrics();

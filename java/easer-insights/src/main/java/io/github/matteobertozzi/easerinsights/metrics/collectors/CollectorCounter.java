@@ -17,7 +17,7 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
 public interface CollectorCounter extends CollectorGauge {
   // 00 inc
@@ -33,5 +33,6 @@ public interface CollectorCounter extends CollectorGauge {
   default void dec(final long timestamp) { add(timestamp, -1); }
   default void add(final long delta) { add(TimeUtil.currentEpochMillis(), delta); }
   default void set(final long value) { set(TimeUtil.currentEpochMillis(), value); }
-  default void sample(final long timestamp, final long value) { set(timestamp, value); }
+
+  @Override default void sample(final long timestamp, final long value) { set(timestamp, value); }
 }

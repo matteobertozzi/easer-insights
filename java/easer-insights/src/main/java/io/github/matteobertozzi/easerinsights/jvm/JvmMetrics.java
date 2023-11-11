@@ -20,7 +20,7 @@ package io.github.matteobertozzi.easerinsights.jvm;
 import java.lang.management.ManagementFactory;
 import java.util.Objects;
 
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public final class JvmMetrics {
   public static final JvmMetrics INSTANCE = new JvmMetrics();
@@ -122,13 +122,13 @@ public final class JvmMetrics {
 
     // JVM Memory
     report.append(" - Memory:");
-    report.append(" Max ").append(DatumUnitConverter.humanSize(JvmMemoryMetrics.INSTANCE.getMaxMemory()));
-    report.append(" - Allocated ").append(DatumUnitConverter.humanSize(JvmMemoryMetrics.INSTANCE.getTotalMemory()));
-    report.append(" - Used ").append(DatumUnitConverter.humanSize(JvmMemoryMetrics.INSTANCE.getUsedMemory()));
+    report.append(" Max ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.getMaxMemory()));
+    report.append(" - Allocated ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.getTotalMemory()));
+    report.append(" - Used ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.getUsedMemory()));
     report.append("\n");
 
     // JVM Uptime
-    report.append(" - Uptime: ").append(DatumUnitConverter.humanTimeMillis(getUptime()));
+    report.append(" - Uptime: ").append(HumansUtil.humanTimeMillis(getUptime()));
     report.append("\n");
 
     // PID

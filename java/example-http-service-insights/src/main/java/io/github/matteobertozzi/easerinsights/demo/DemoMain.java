@@ -39,7 +39,7 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 

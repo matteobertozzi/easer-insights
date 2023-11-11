@@ -18,35 +18,27 @@
 package io.github.matteobertozzi.easerinsights.metrics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector.MetricSnapshot;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector.MetricDatumUpdateType;
+import io.github.matteobertozzi.rednaco.collections.arrays.paged.PagedArray;
 
 public final class MetricsRegistry {
   public static final MetricsRegistry INSTANCE = new MetricsRegistry();
 
-  private static final int COLLECTORS_PAGE_SIZE = 512;
-
   private final ConcurrentHashMap<MetricKey, MetricCollector> collectorsNames = new ConcurrentHashMap<>(1024);
-  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
-  private MetricCollector[][] collectorsPages;
-  private MetricCollector[] lastPage;
-  private int lastPageOffset;
+  private final PagedArray<MetricCollector> collectorsPages = new PagedArray<>(MetricCollector.class, 512);
+  private final ReentrantLock lock = new ReentrantLock(true);
 
   private MetricsRegistry() {
-    this.collectorsPages = new MetricCollector[0][];
-    this.lastPage = null;
-    this.lastPageOffset = COLLECTORS_PAGE_SIZE;
+    // no-op
   }
 
   public MetricCollector get(final String name) {
@@ -62,14 +54,9 @@ public final class MetricsRegistry {
   }
 
   public MetricCollector get(final int metricId) {
-    final int metricOffset = metricId - 1;
-    final int pageId = metricOffset / COLLECTORS_PAGE_SIZE;
-    final int pageOffset = metricOffset & (COLLECTORS_PAGE_SIZE - 1);
-
-    final ReadLock lock = rwLock.readLock();
     lock.lock();
     try {
-      return collectorsPages[pageId][pageOffset];
+      return collectorsPages.get(metricId - 1);
     } finally {
       lock.unlock();
     }
@@ -102,24 +89,17 @@ public final class MetricsRegistry {
   }
 
   // ================================================================================================
-  @SuppressWarnings("unchecked")
   <T extends MetricDatumCollector> T register(final String name, final DatumUnit unit,
       final String label, final String help, final T datumCollector) {
     final MetricDefinition definition = MetricDefinitionUtil.newMetricDefinition(name, unit, label, help);
-    final WriteLock wlock = rwLock.writeLock();
-    wlock.lock();
-    try {
-      // check if we have already registered the key
-      final MetricCollector counter = get(definition);
-      if (counter != null) {
-        throw new IllegalStateException("metric name already registered: " + counter.definition());
-      }
+    return register(definition, datumCollector);
+  }
 
-      // generate a new collector
-      return (T) register(definition, datumCollector);
-    } finally {
-      wlock.unlock();
-    }
+  <T extends MetricDatumCollector> T register(final String name, final String[] dimensionKeys, final String[] dimensionValues,
+      final DatumUnit unit, final String label, final String help,
+      final T datumCollector) {
+    final MetricDefinition definition = MetricDefinitionUtil.newMetricDefinition(name, dimensionKeys, dimensionValues, unit, label, help);
+    return register(definition, datumCollector);
   }
 
   @SuppressWarnings("unchecked")
@@ -128,67 +108,80 @@ public final class MetricsRegistry {
       final Supplier<T> collectorSupplier) {
     final MetricDefinition definition = MetricDefinitionUtil.newMetricDefinition(name, dimensionKeys, dimensionValues, unit, label, help);
 
-    final WriteLock wlock = rwLock.writeLock();
-    wlock.lock();
+    lock.lock();
     try {
       // check if we have already registered the key
       final MetricCollector collector = get(definition);
       if (collector != null) return (T) collector;
 
       // generate a new collector
-      return (T) register(definition, collectorSupplier.get());
+      return (T) addCollector(definition, collectorSupplier.get());
     } finally {
-      wlock.unlock();
+      lock.unlock();
     }
   }
 
-  private MetricCollector register(final MetricDefinition definition, final MetricDatumCollector datumCollector) {
-    final int metricId = ensureMetricIdSlotAvailable();
+  @SuppressWarnings("unchecked")
+  private <T extends MetricDatumCollector> T register(final MetricDefinition definition, final T datumCollector) {
+    lock.lock();
+    try {
+      // check if we have already registered the key
+      final MetricCollector counter = get(definition);
+      if (counter != null) {
+        throw new IllegalStateException("metric name already registered: " + counter.definition());
+      }
+
+      // generate a new collector
+      return (T) addCollector(definition, datumCollector);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  private MetricCollector addCollector(final MetricDefinition definition, final MetricDatumCollector datumCollector) {
+    final int metricId = collectorsPages.size();
     final MetricCollector collector = datumCollector.newCollector(definition, metricId);
-    lastPage[lastPageOffset++] = collector;
+    collectorsPages.add(collector);
     collectorsNames.put(definition, collector);
     return collector;
-  }
-
-  // ================================================================================================
-  private int ensureMetricIdSlotAvailable() {
-    if (lastPageOffset == COLLECTORS_PAGE_SIZE) {
-      collectorsPages = Arrays.copyOf(collectorsPages, collectorsPages.length + 1);
-      lastPage = new MetricCollector[COLLECTORS_PAGE_SIZE];
-      lastPageOffset = 0;
-      collectorsPages[collectorsPages.length - 1] = lastPage;
-    }
-    return 1 + (((collectorsPages.length - 1) * COLLECTORS_PAGE_SIZE) + lastPageOffset);
   }
 
   // ================================================================================================
   //  HumanReport/Snapshot related
   // ================================================================================================
   public String humanReport() {
-    final StringBuilder sb = new StringBuilder(1 << 20);
+    lock.lock();
+    try {
+      final StringBuilder sb = new StringBuilder(1 << 20);
 
-    JvmMetrics.INSTANCE.addToHumanReport(sb);
+      JvmMetrics.INSTANCE.addToHumanReport(sb);
 
-    for (final MetricCollector[] page: collectorsPages) {
-      for (final MetricCollector metricCollector: page) {
-        if (metricCollector == null) break;
-
-        final MetricSnapshot snapshot = metricCollector.snapshot();
-        sb.append("\n--- ").append(snapshot.label()).append(" (").append(snapshot.name()).append(") ---\n");
-        snapshot.data().addToHumanReport(metricCollector.definition(), sb);
-      }
+      collectorsPages.forEach((page, pageOff, pageLen) -> {
+        for (int i = 0; i < pageLen; ++i) {
+          final MetricCollector metricCollector = page[pageOff + i];
+          final MetricSnapshot snapshot = metricCollector.snapshot();
+          sb.append("\n--- ").append(snapshot.label()).append(" (").append(snapshot.name()).append(") ---\n");
+          snapshot.data().addToHumanReport(metricCollector.definition(), sb);
+        }
+      });
+      return sb.toString();
+    } finally {
+      lock.unlock();
     }
-    return sb.toString();
   }
 
   public List<MetricSnapshot> snapshot() {
-    final ArrayList<MetricSnapshot> snapshot = new ArrayList<>(collectorsPages.length * COLLECTORS_PAGE_SIZE);
-    for (final MetricCollector[] page : collectorsPages) {
-      for (final MetricCollector metricCollector : page) {
-        if (metricCollector == null) break;
-        snapshot.add(metricCollector.snapshot());
-      }
+    lock.lock();
+    try {
+      final ArrayList<MetricSnapshot> snapshot = new ArrayList<>(collectorsPages.size());
+      collectorsPages.forEach((page, pageOff, pageLen) -> {
+        for (int i = 0; i < pageLen; ++i) {
+          snapshot.add(page[pageOff + i].snapshot());
+        }
+      });
+      return snapshot;
+    } finally {
+      lock.unlock();
     }
-    return snapshot;
   }
 }

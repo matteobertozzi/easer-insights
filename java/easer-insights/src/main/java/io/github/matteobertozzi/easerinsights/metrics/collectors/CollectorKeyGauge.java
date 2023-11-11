@@ -17,7 +17,7 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
 public interface CollectorKeyGauge {
   void sample(String key, long timestamp, long value);

@@ -19,13 +19,14 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeCounterCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeCounterImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeCounterImplSt;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface TimeRangeCounter extends CollectorCounter, MetricDatumCollector {
   static TimeRangeCounter newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
@@ -61,17 +62,17 @@ public interface TimeRangeCounter extends CollectorCounter, MetricDatumCollector
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
       if (window == 0) return report.append("(no data)\n");
 
-      final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      final DatumUnitConverter unitConverter = metricDefinition.unit().humanConverter();
 
-      report.append("window ").append(DatumUnitConverter.humanTimeMillis(window));
-      report.append(" - ").append(DatumUnitConverter.humanDateFromEpochMillis(getFirstInterval()));
+      report.append("window ").append(HumansUtil.humanTimeMillis(window));
+      report.append(" - ").append(HumansUtil.humanDateFromEpochMillis(getFirstInterval()));
       report.append(" - [");
       for (int i = 0, n = counters.length; i < n; ++i) {
         if (i > 0) report.append(',');
         report.append(unitConverter.asHumanString(counters[i]));
       }
       report.append("] - ");
-      report.append(DatumUnitConverter.humanDateFromEpochMillis(getLastInterval()));
+      report.append(HumansUtil.humanDateFromEpochMillis(getLastInterval()));
       report.append('\n');
       return report;
     }

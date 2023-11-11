@@ -27,7 +27,7 @@ import java.util.function.Function;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.EaserInsightsExporter;
-import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
+import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
 
 public class BatchDatumExporter implements EaserInsightsExporter.DatumBufferFlusher {
   private final LinkedTransferQueue<byte[]> datumBuffers = new LinkedTransferQueue<>();

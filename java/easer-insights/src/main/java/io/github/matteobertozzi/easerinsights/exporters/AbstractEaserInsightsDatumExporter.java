@@ -29,7 +29,8 @@ import java.util.function.Function;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.EaserInsightsExporter;
-import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
+import io.github.matteobertozzi.easerinsights.logger.Logger;
+import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
 
 public abstract class AbstractEaserInsightsDatumExporter implements EaserInsightsExporter, EaserInsightsExporter.DatumBufferFlusher {
   private final BatchDatumExporter batchDatumExporter = new BatchDatumExporter();
@@ -56,7 +57,7 @@ public abstract class AbstractEaserInsightsDatumExporter implements EaserInsight
       return;
     }
 
-    ThreadUtil.ignoreException("datumProcessor", "joining", datumProcessorThread::join);
+    Logger.ignoreException("datumProcessor", "joining", datumProcessorThread::join);
   }
 
   public boolean isRunning() {

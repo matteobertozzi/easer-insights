@@ -19,14 +19,11 @@ package io.github.matteobertozzi.easerinsights;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Logger;
 
-import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
+import io.github.matteobertozzi.easerinsights.logger.Logger;
 
 public final class EaserInsights implements AutoCloseable {
   public static final EaserInsights INSTANCE = new EaserInsights();
-
-  private static final Logger LOGGER = Logger.getLogger("EaserInsights");
 
   private final ArrayList<EaserInsightsExporter> exporters = new ArrayList<>();
   private final EaserInsightsExporterQueue exporterQueue = new EaserInsightsExporterQueue();
@@ -46,8 +43,8 @@ public final class EaserInsights implements AutoCloseable {
 
     while (!exporters.isEmpty()) {
       final EaserInsightsExporter exporter = exporters.remove(exporters.size() - 1);
-      ThreadUtil.ignoreException(exporter.name(), "stopping", exporter::stop);
-      ThreadUtil.ignoreException(exporter.name(), "closing", exporter::close);
+      Logger.ignoreException(exporter.name(), "stopping", exporter::stop);
+      Logger.ignoreException(exporter.name(), "closing", exporter::close);
     }
   }
 

@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferWriter;
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
 public class TestDatumBuffer {
   @Test

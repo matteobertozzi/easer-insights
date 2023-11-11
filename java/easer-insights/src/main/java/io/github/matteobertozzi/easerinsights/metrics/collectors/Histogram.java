@@ -17,14 +17,15 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplSt;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
-import io.github.matteobertozzi.easerinsights.util.StatisticsUtil;
+import io.github.matteobertozzi.rednaco.math.Statistics;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface Histogram extends CollectorGauge, MetricDatumCollector {
   static Histogram newSingleThreaded(final long[] bounds) {
@@ -82,11 +83,11 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
 
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
-      final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      final DatumUnitConverter unitConverter = metricDefinition.unit().humanConverter();
 
       if (numEvents == 0) return report.append("(no data)\n");
 
-      report.append("Count: ").append(DatumUnitConverter.humanCount(numEvents));
+      report.append("Count: ").append(HumansUtil.humanCount(numEvents));
       report.append(" Average: ").append(unitConverter.asHumanString(Math.round(average())));
       report.append(" StdDev: ").append(unitConverter.asHumanString(Math.round(standardDeviation())));
       report.append('\n');
@@ -113,7 +114,7 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
         report.append(String.format(lineFormat,
             unitConverter.asHumanString((b == 0) ? minValue : bounds[b - 1]),
             unitConverter.asHumanString(bounds[b]),
-            DatumUnitConverter.humanCount(bucketValue),
+            HumansUtil.humanCount(bucketValue),
             (mult * bucketValue),
             (mult * cumulativeSum)));
 
@@ -128,17 +129,17 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
     public long maxValue() { return bounds.length != 0 ? bounds[bounds.length - 1] : 0; }
 
     public double average() {
-      return StatisticsUtil.average(numEvents(), sum());
+      return Statistics.average(numEvents(), sum());
     }
 
     public double standardDeviation() {
-      return StatisticsUtil.standardDeviation(numEvents(), sum(), sumSquares());
+      return Statistics.standardDeviation(numEvents(), sum(), sumSquares());
     }
 
     public double median() { return percentile(50.0); }
 
     public double percentile(final double p) {
-      return StatisticsUtil.percentile(p, bounds(), minValue(), maxValue(), numEvents(), events, 0);
+      return Statistics.percentile(p, bounds(), minValue(), maxValue(), numEvents(), events, 0);
     }
   }
 

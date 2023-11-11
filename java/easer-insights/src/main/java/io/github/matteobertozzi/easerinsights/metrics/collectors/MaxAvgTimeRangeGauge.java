@@ -19,13 +19,14 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeImplSt;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollector {
   static MaxAvgTimeRangeGauge newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
@@ -61,15 +62,15 @@ public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollect
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
       if (window == 0) return report.append("(no data)\n");
 
-      final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      final DatumUnitConverter unitConverter = metricDefinition.unit().humanConverter();
 
-      report.append("window ").append(DatumUnitConverter.humanTimeMillis(window));
-      report.append(" - ").append(DatumUnitConverter.humanDateFromEpochMillis(getFirstInterval()));
+      report.append("window ").append(HumansUtil.humanTimeMillis(window));
+      report.append(" - ").append(HumansUtil.humanDateFromEpochMillis(getFirstInterval()));
       report.append(" - [");
       for (int i = 0; i < max.length; ++i) {
         if (i > 0) report.append(',');
         final long avg = count[i] > 0 ? Math.round(sum[i] / (double)count[i]) : 0;
-        report.append(DatumUnitConverter.humanCount(count[i]));
+        report.append(HumansUtil.humanCount(count[i]));
         report.append("/");
         report.append(unitConverter.asHumanString(sum[i]));
         report.append('/');
@@ -78,7 +79,7 @@ public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollect
         report.append(unitConverter.asHumanString(max[i]));
       }
       report.append("] - ");
-      report.append(DatumUnitConverter.humanDateFromEpochMillis(getLastInterval()));
+      report.append(HumansUtil.humanDateFromEpochMillis(getLastInterval()));
       report.append('\n');
       return report;
     }

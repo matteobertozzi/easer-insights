@@ -15,14 +15,17 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.metrics.collectors;
+package io.github.matteobertozzi.easerinsights.logger;
 
-import io.github.matteobertozzi.rednaco.time.TimeUtil;
+import java.io.OutputStream;
 
-public interface CollectorGauge {
-  void sample(long timestamp, long value);
+import io.github.matteobertozzi.easerinsights.logger.Logger.LogLevel;
 
-  default void sample(final long value) {
-    sample(TimeUtil.currentEpochMillis(), value);
+public interface LogProvider {
+  void logMessage(LogLevel level, Throwable exception, String format, Object[] args);
+  void logEntry(LogEntry entry);
+
+  public interface LogEntry {
+    void writeTo(OutputStream stream);
   }
 }

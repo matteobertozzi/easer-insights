@@ -21,18 +21,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
+import io.github.matteobertozzi.easerinsights.logger.Logger;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
-import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
@@ -58,8 +56,6 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
     .name("aws_cloudwatch_exporter_put_metric_data_failed")
     .label("CloudWatch Put Metric Data Failed")
     .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
-
-  private static final Logger LOGGER = Logger.getLogger("AwsCloudWatchExporter");
 
   private final ArrayList<Dimension> dimensions = new ArrayList<>();
   private final CloudWatchClient cloudWatch;
@@ -100,7 +96,7 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
   @Override
   public void close() throws IOException {
     super.close();
-    ThreadUtil.ignoreException("cloudwatch", "closing", cloudWatch::close);
+    Logger.ignoreException("cloudwatch", "closing", cloudWatch::close);
   }
 
   @Override
@@ -130,7 +126,7 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
         cloudWatchPutFailed.inc();
       }
     } catch (final Throwable e) {
-      LOGGER.log(Level.WARNING, "AWS CloudWatch failure, discarding metric data: " + e.getMessage(), e);
+      Logger.error(e, "AWS CloudWatch failure, discarding metric data");
       cloudWatchPutFailed.inc();
     } finally {
       final long elapsedNs = System.nanoTime() - startTime;

@@ -28,7 +28,7 @@ import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
-import io.github.matteobertozzi.easerinsights.util.HumansTableView;
+import io.github.matteobertozzi.rednaco.strings.HumansTableView;
 
 public final class JvmCpuMetrics {
   public static final JvmCpuMetrics INSTANCE = new JvmCpuMetrics();

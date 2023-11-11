@@ -39,6 +39,11 @@ public final class Metrics {
       validate();
       return MetricsRegistry.INSTANCE.register(name(), unit(), label(), help(), collector);
     }
+
+    public <T extends MetricDatumCollector> T register(final MetricDimensionGroup group, final T collector) {
+      validate();
+      return group.register(name(), unit(), label(), help(), collector);
+    }
   }
 
   public static final class MetricDimensionsBuilder extends AbstractMetricBuilder<MetricDimensionsBuilder> {

@@ -19,5 +19,5 @@ JDK_FLAGS="${JDK_FLAGS} -XX:+UnlockExperimentalVMOptions"
 #JDK_FLAGS="${JDK_FLAGS} -XX:+UseShenandoahGC -XX:ShenandoahMinFreeThreshold=40 -XX:ShenandoahInitFreeThreshold=20 -XX:ShenandoahUncommitDelay=1000 -XX:ShenandoahGuaranteedGCInterval=10000"
 JDK_FLAGS="${JDK_FLAGS} -XX:+UseZGC -XX:+ZGenerational -XX:ZUncommitDelay=120"
 
-EXAMPLES_VERSION="0.1.4-SNAPSHOT"
+EXAMPLES_VERSION="0.1.5-SNAPSHOT"
 java ${JDK_FLAGS} -cp target/example-http-service-insights-${EXAMPLES_VERSION}.jar:target/lib/* io.github.matteobertozzi.easerinsights.demo.DemoMain

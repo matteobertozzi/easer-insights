@@ -17,13 +17,14 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplSt;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface Counter extends CollectorCounter, MetricDatumCollector {
   static Counter newSingleThreaded() {
@@ -47,8 +48,8 @@ public interface Counter extends CollectorCounter, MetricDatumCollector {
   record CounterSnapshot (long lastUpdate, long value) implements MetricDataSnapshot {
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
-      final DatumUnitConverter converter = DatumUnitConverter.humanConverter(metricDefinition.unit());
-      report.append(converter.asHumanString(value)).append(" lastUpdated: ").append(DatumUnitConverter.humanDateFromEpochMillis(lastUpdate));
+      final DatumUnitConverter converter = metricDefinition.unit().humanConverter();
+      report.append(converter.asHumanString(value)).append(" lastUpdated: ").append(HumansUtil.humanDateFromEpochMillis(lastUpdate));
       report.append("\n");
       return report;
     }

@@ -20,14 +20,15 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TopKCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TopKImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TopKImplSt;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
-import io.github.matteobertozzi.easerinsights.util.HumansTableView;
+import io.github.matteobertozzi.rednaco.strings.HumansTableView;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
   static TopK newSingleThreaded(final int k, final long maxInterval, final long window, final TimeUnit unit) {
@@ -76,7 +77,7 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
       if (entries.length == 0) return report.append("(no data)\n");
 
-      final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      final DatumUnitConverter unitConverter = metricDefinition.unit().humanConverter();
 
       final HumansTableView table = new HumansTableView();
       table.addColumns(HEADER);
@@ -84,11 +85,11 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
         final TopEntrySnapshot entry = entries[i];
 
         table.addRow(List.of(
-          entry.key(), DatumUnitConverter.humanDateFromEpochMillis(entry.maxTimestamp()),
+          entry.key(), HumansUtil.humanDateFromEpochMillis(entry.maxTimestamp()),
           unitConverter.asHumanString(entry.maxValue()), unitConverter.asHumanString(entry.minValue()),
           unitConverter.asHumanString(Math.round(entry.average())),
           unitConverter.asHumanString(Math.round(entry.standardDeviation())),
-          DatumUnitConverter.humanCount(entry.count())
+          HumansUtil.humanCount(entry.count())
         ));
       }
       return table.addHumanView(report);

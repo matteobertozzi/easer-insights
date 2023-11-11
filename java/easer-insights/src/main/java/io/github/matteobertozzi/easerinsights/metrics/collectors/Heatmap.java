@@ -19,13 +19,14 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
 import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit.DatumUnitConverter;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapCollector;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapImplMt;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapImplSt;
-import io.github.matteobertozzi.easerinsights.util.DatumUnitConverter;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface Heatmap extends CollectorGauge, MetricDatumCollector {
   static Heatmap newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
@@ -56,7 +57,7 @@ public interface Heatmap extends CollectorGauge, MetricDatumCollector {
 
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
-      final DatumUnitConverter unitConverter = DatumUnitConverter.humanConverter(metricDefinition.unit());
+      final DatumUnitConverter unitConverter = metricDefinition.unit().humanConverter();
 
       long maxEvents = 0;
       for (int i = 0; i < events.length; ++i) {
@@ -88,12 +89,12 @@ public interface Heatmap extends CollectorGauge, MetricDatumCollector {
         report.append("----");
       }
       report.append("\n");
-      report.append("        25%:").append(DatumUnitConverter.humanCount(e25));
-      report.append(", 50%:").append(DatumUnitConverter.humanCount(e50));
-      report.append(", 75%:").append(DatumUnitConverter.humanCount(e75));
-      report.append(", 90%:").append(DatumUnitConverter.humanCount(e90));
-      report.append(", 99%:").append(DatumUnitConverter.humanCount(e99));
-      report.append(", max:").append(DatumUnitConverter.humanCount(maxEvents));
+      report.append("        25%:").append(HumansUtil.humanCount(e25));
+      report.append(", 50%:").append(HumansUtil.humanCount(e50));
+      report.append(", 75%:").append(HumansUtil.humanCount(e75));
+      report.append(", 90%:").append(HumansUtil.humanCount(e90));
+      report.append(", 99%:").append(HumansUtil.humanCount(e99));
+      report.append(", max:").append(HumansUtil.humanCount(maxEvents));
       report.append("\n");
       return report;
     }

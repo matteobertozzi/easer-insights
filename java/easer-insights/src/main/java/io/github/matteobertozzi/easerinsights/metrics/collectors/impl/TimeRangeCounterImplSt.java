@@ -21,9 +21,9 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
-import io.github.matteobertozzi.easerinsights.util.ArrayUtil;
-import io.github.matteobertozzi.easerinsights.util.TimeRange;
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.collections.arrays.ArrayUtil;
+import io.github.matteobertozzi.rednaco.time.TimeRange;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
 public class TimeRangeCounterImplSt implements TimeRangeCounter {
   private final TimeRange timeRange;

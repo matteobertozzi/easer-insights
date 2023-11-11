@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import io.github.matteobertozzi.easerinsights.DatumUnit;
-import io.github.matteobertozzi.easerinsights.util.ImmutableCollections;
+import io.github.matteobertozzi.rednaco.collections.ImmutableCollections;
 
 public final class MetricDefinitionUtil {
   private static final String[] EMPTY_STRING_ARRAY = new String[0];

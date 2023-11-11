@@ -17,6 +17,8 @@
 
 package io.github.matteobertozzi.easerinsights;
 
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
+
 public enum DatumUnit {
   BITS,
   BYTES,
@@ -29,4 +31,31 @@ public enum DatumUnit {
   MICROSECONDS,
   MILLISECONDS,
   SECONDS,
+  ;
+
+  public String asHumanString(final long value) {
+    return humanConverter(this).asHumanString(value);
+  }
+
+  public DatumUnitConverter humanConverter() {
+    return humanConverter(this);
+  }
+
+  public static DatumUnitConverter humanConverter(final DatumUnit unit) {
+    return switch (unit) {
+      case BITS -> HumansUtil::humanBits;
+      case BYTES -> HumansUtil::humanBytes;
+      case COUNT -> HumansUtil::humanCount;
+      case PERCENT -> HumansUtil::humanPercent;
+      case MICROSECONDS -> HumansUtil::humanTimeMicros;
+      case MILLISECONDS -> HumansUtil::humanTimeMillis;
+      case NANOSECONDS -> HumansUtil::humanTimeNanos;
+      case SECONDS -> HumansUtil::humanTimeSeconds;
+    };
+  }
+
+  @FunctionalInterface
+  public interface DatumUnitConverter {
+    String asHumanString(long value);
+  }
 }

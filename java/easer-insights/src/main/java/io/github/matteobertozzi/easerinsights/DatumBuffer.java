@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
-import io.github.matteobertozzi.easerinsights.util.TimeUtil;
+import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
 public final class DatumBuffer {
   private static final int MAX_ENTRY_SIZE = 1 + 3 + 6 + 8;

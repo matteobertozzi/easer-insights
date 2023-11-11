@@ -22,17 +22,14 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferWriter;
+import io.github.matteobertozzi.easerinsights.logger.Logger;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
-import io.github.matteobertozzi.easerinsights.util.ThreadUtil;
+import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
 
 final class EaserInsightsExporterQueue {
-  private static final Logger LOGGER = Logger.getLogger("EaserInsightsExporterQueue");
-
   private final LinkedTransferQueue<byte[]> datumBuffers = new LinkedTransferQueue<>();
   private final CopyOnWriteArrayList<EaserInsightsExporter.DatumBufferFlusher> datumBufferListeners = new CopyOnWriteArrayList<>();
   private final DatumBufferWriter bufferWriter = DatumBuffer.newWriter(1000, 8192, datumBuffers::add);
@@ -55,7 +52,7 @@ final class EaserInsightsExporterQueue {
     }
 
     if (flusherThread != null) {
-      ThreadUtil.ignoreException("flusherThread", "joining", flusherThread::join);
+      Logger.ignoreException("flusherThread", "joining", flusherThread::join);
     }
   }
 
@@ -106,7 +103,7 @@ final class EaserInsightsExporterQueue {
           flusher.datumBufferFlushAsync(page);
         }
       } catch (final Throwable e) {
-        LOGGER.log(Level.SEVERE, "failure while flushing export buffer", e);
+        Logger.error(e, "failure while flushing export buffer");
       }
     }
   }
