@@ -17,8 +17,13 @@
 
 package io.github.matteobertozzi.easerinsights.demo;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +34,10 @@ import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.EaserInsights;
 import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
 import io.github.matteobertozzi.easerinsights.jvm.BuildInfo;
+import io.github.matteobertozzi.easerinsights.jvm.JvmMemoryMetrics;
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
+import io.github.matteobertozzi.easerinsights.logging.Logger;
+import io.github.matteobertozzi.easerinsights.logging.providers.TextLogProvider;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDimension;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
@@ -39,6 +47,13 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
+import io.github.matteobertozzi.easerinsights.tracing.TaskMonitor;
+import io.github.matteobertozzi.easerinsights.tracing.Tracer;
+import io.github.matteobertozzi.easerinsights.tracing.providers.Base58RandSpanId;
+import io.github.matteobertozzi.easerinsights.tracing.providers.Hex128RandTraceId;
+import io.github.matteobertozzi.easerinsights.tracing.providers.basic.BasicTracer;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
+import io.github.matteobertozzi.rednaco.strings.TemplateUtil;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -102,7 +117,48 @@ public final class DemoMain {
     }
   }
 
+  private static String loadResourceAsString(final String path) throws IOException {
+    try (InputStream stream = DemoMain.class.getClassLoader().getResourceAsStream(path)) {
+      return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+    }
+  }
+
+  private static String buildMonitorPage() throws IOException {
+    final String template = loadResourceAsString("webapp/monitor.html");
+
+    final StringBuilder builder = new StringBuilder(4096);
+    final HashMap<String, String> templateVars = new HashMap<>(32);
+
+    templateVars.put("now", ZonedDateTime.now().toString());
+
+    templateVars.put("service.name", JvmMetrics.INSTANCE.buildInfo().getName());
+    templateVars.put("build.version", JvmMetrics.INSTANCE.buildInfo().getVersion() + " (" + JvmMetrics.INSTANCE.buildInfo().getBuildDate() + ")");
+    templateVars.put("service.uptime", HumansUtil.humanTimeMillis(JvmMetrics.INSTANCE.getUptime()));
+
+    templateVars.put("memory.max", HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.maxMemory()));
+    templateVars.put("memory.allocated", HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.totalMemory()));
+    templateVars.put("memory.used", HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.usedMemory()));
+
+    builder.setLength(0);
+    TaskMonitor.INSTANCE.addActiveTasksToHumanReport(builder);
+    templateVars.put("active.tasks", builder.toString());
+
+    builder.setLength(0);
+    TaskMonitor.INSTANCE.addSlowTasksToHumanReport(builder);
+    templateVars.put("slow.tasks", builder.toString());
+
+    builder.setLength(0);
+    TaskMonitor.INSTANCE.addRecentlyCompletedTasksToHumanReport(builder);
+    templateVars.put("recently.completed.tasks", builder.toString());
+
+    return TemplateUtil.processTemplate(template, templateVars);
+  }
+
   public static void main(final String[] args) throws Exception {
+    Logger.setLogProvider(new TextLogProvider());
+    Tracer.setTraceProvider(BasicTracer.INSTANCE);
+    Tracer.setIdProviders(Hex128RandTraceId.PROVIDER, Base58RandSpanId.PROVIDER);
+
     final BuildInfo buildInfo = BuildInfo.loadInfoFromManifest("example-http-service-insights");
     System.out.println(buildInfo);
     JvmMetrics.INSTANCE.setBuildInfo(buildInfo);
@@ -117,6 +173,19 @@ public final class DemoMain {
       },
       "/metrics/json", (ctx, req, query) -> {
         HttpServer.sendResponse(ctx, req, query, MetricsRegistry.INSTANCE.snapshot());
+      },
+      "/monitor", (ctx, req, query) -> {
+        final String report = buildMonitorPage();
+        HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.OK, HttpHeaderValues.TEXT_HTML, report.getBytes(StandardCharsets.UTF_8));
+      },
+      "/slow", (ctx, req, query) -> {
+        final long minMillis = Long.parseLong(query.parameters().getOrDefault("minMillis", List.of("100")).get(0));
+        final long maxMillis = Long.parseLong(query.parameters().getOrDefault("maxMillis", List.of("15000")).get(0));
+        final StringBuilder report = new StringBuilder();
+        report.append("path: ").append(query.path()).append("\n");
+        report.append("params: ").append(query.parameters()).append("\n");
+        Thread.sleep(minMillis + Math.round(Math.random() * maxMillis));
+        HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.NOT_FOUND, HttpHeaderValues.TEXT_PLAIN, report.toString().getBytes(StandardCharsets.UTF_8));
       },
       "*", (ctx, req, query) -> {
         final StringBuilder report = new StringBuilder();

@@ -25,6 +25,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
+import io.github.matteobertozzi.easerinsights.logging.Logger;
+import io.github.matteobertozzi.easerinsights.tracing.RootSpan;
+import io.github.matteobertozzi.easerinsights.tracing.Span.SpanState;
+import io.github.matteobertozzi.easerinsights.tracing.Tracer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -112,25 +116,31 @@ public final class HttpServer {
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) {
       final QueryStringDecoder queryDecoder = new QueryStringDecoder(req.uri());
-      try {
-        req.headers().set("X-Req-StartMs", System.currentTimeMillis());
+      try (RootSpan span = Tracer.newRootSpan()) {
+        span.setName("HTTP " + req.method() + " " + req.uri());
 
-        HttpHandler handler = handlers.get(queryDecoder.path());
-        if (handler != null) {
-          handler.handle(ctx, req, queryDecoder);
-          return;
+        try {
+          req.headers().set("X-Req-StartMs", System.currentTimeMillis());
+
+          HttpHandler handler = handlers.get(queryDecoder.path());
+          if (handler != null) {
+            handler.handle(ctx, req, queryDecoder);
+            return;
+          }
+
+          handler = handlers.get("*");
+          if (handler != null) {
+            handler.handle(ctx, req, queryDecoder);
+            return;
+          }
+
+          span.setState(SpanState.USER_FAILURE);
+          sendResponse(ctx, req, queryDecoder, HttpResponseStatus.NOT_FOUND, HttpHeaderValues.TEXT_PLAIN, queryDecoder.path().getBytes(StandardCharsets.UTF_8));
+        } catch (final Exception e) {
+          Logger.error(e, "failed to execute request: {} {}", req.method(), req.uri());
+          span.setFailureState(e, SpanState.SYSTEM_FAILURE);
+          sendResponse(ctx, req, queryDecoder, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpHeaderValues.TEXT_PLAIN, e.getMessage().getBytes(StandardCharsets.UTF_8));
         }
-
-        handler = handlers.get("*");
-        if (handler != null) {
-          handler.handle(ctx, req, queryDecoder);
-          return;
-        }
-
-        sendResponse(ctx, req, queryDecoder, HttpResponseStatus.NOT_FOUND, HttpHeaderValues.TEXT_PLAIN, queryDecoder.path().getBytes(StandardCharsets.UTF_8));
-      } catch (final Exception e) {
-        e.printStackTrace();
-        sendResponse(ctx, req, queryDecoder, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpHeaderValues.TEXT_PLAIN, e.getMessage().getBytes(StandardCharsets.UTF_8));
       }
     }
 
@@ -141,7 +151,7 @@ public final class HttpServer {
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
-      cause.printStackTrace();
+      Logger.error("connection failure: {}", cause.getMessage());
       ctx.close();
     }
   }
@@ -165,7 +175,7 @@ public final class HttpServer {
     HttpServer.respHandler = respHandler;
 
     final EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    final EventLoopGroup workerGroup = new NioEventLoopGroup();
+    final EventLoopGroup workerGroup = new NioEventLoopGroup(16);
     try {
       final ServerBootstrap b = new ServerBootstrap();
       b.option(ChannelOption.SO_BACKLOG, 1024);
