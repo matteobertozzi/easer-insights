@@ -17,12 +17,22 @@
 
 package io.github.matteobertozzi.easerinsights.jvm;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryNotificationInfo;
+import java.lang.management.MemoryPoolMXBean;
 import java.util.concurrent.TimeUnit;
 
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.openmbean.CompositeData;
+
 import io.github.matteobertozzi.easerinsights.DatumUnit;
+import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
+import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public final class JvmMemoryMetrics {
   public static final JvmMemoryMetrics INSTANCE = new JvmMemoryMetrics();
@@ -54,7 +64,7 @@ public final class JvmMemoryMetrics {
     }));
 
   private JvmMemoryMetrics() {
-    // no-op
+    registerListeners();
   }
 
   public void collect(final long now) {
@@ -66,25 +76,65 @@ public final class JvmMemoryMetrics {
     usedMemoryHisto.sample(memUsed);
   }
 
-  public long getUsedMemory() {
+  public long usedMemory() {
     final Runtime runtime = Runtime.getRuntime();
     return runtime.totalMemory() - runtime.freeMemory();
   }
 
-  public long getAvailableMemory() {
+  public long availableMemory() {
     final Runtime runtime = Runtime.getRuntime();
     return runtime.maxMemory() - (runtime.totalMemory() - runtime.freeMemory());
   }
 
-  public long getMaxMemory() {
+  public long maxMemory() {
     return Runtime.getRuntime().maxMemory();
   }
 
-  public long getTotalMemory() {
+  public long totalMemory() {
     return Runtime.getRuntime().totalMemory();
   }
 
-  public long getFreeMemory() {
+  public long freeMemory() {
     return Runtime.getRuntime().freeMemory();
+  }
+
+  // =======================================================================================================================================
+  //  Memory Usage threshold
+  // =======================================================================================================================================
+  public void setUsageThreshold(final double threshold, final long minPoolBytes) {
+    for (final MemoryPoolMXBean mxBean: ManagementFactory.getMemoryPoolMXBeans()) {
+      final long maxMemory = mxBean.getPeakUsage().getMax();
+      if (maxMemory < minPoolBytes) continue;
+
+      final long thresholdBytes = Math.round(threshold * maxMemory);
+      if (mxBean.isUsageThresholdSupported()) {
+        mxBean.setUsageThreshold(thresholdBytes);
+        Logger.debug("set usage threshold to {}/{} for {} {} {}",
+          threshold, HumansUtil.humanBytes(thresholdBytes), HumansUtil.humanBytes(maxMemory), mxBean.getType(), mxBean.getName());
+      }
+
+      if (mxBean.isCollectionUsageThresholdSupported()) {
+        Logger.debug("set collection usage threshold to {}/{} for {} {} {}",
+            threshold, HumansUtil.humanBytes(thresholdBytes), HumansUtil.humanBytes(maxMemory), mxBean.getType(), mxBean.getName());
+        mxBean.setCollectionUsageThreshold(thresholdBytes);
+      }
+    }
+  }
+
+  private void registerListeners() {
+    final MemoryMXBean memoryMxBean = ManagementFactory.getMemoryMXBean();
+    if (memoryMxBean instanceof final NotificationEmitter notificationEmitter) {
+        notificationEmitter.addNotificationListener(JvmMemoryMetrics::onMemoryNotification, null, null);
+    }
+  }
+
+  private static void onMemoryNotification(final Notification notification, final Object ref) {
+    if (MemoryNotificationInfo.MEMORY_COLLECTION_THRESHOLD_EXCEEDED.equals(notification.getType())
+      || MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED.equals(notification.getType())
+    ) {
+      final MemoryNotificationInfo info = MemoryNotificationInfo.from((CompositeData) notification.getUserData());
+      Logger.warn("Running low on memory {type} {source}: {pool} {count} {usage}",
+        notification.getType(), notification.getSource(), info.getPoolName(), info.getCount(), info.getUsage());
+    }
   }
 }

@@ -122,9 +122,9 @@ public final class JvmMetrics {
 
     // JVM Memory
     report.append(" - Memory:");
-    report.append(" Max ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.getMaxMemory()));
-    report.append(" - Allocated ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.getTotalMemory()));
-    report.append(" - Used ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.getUsedMemory()));
+    report.append(" Max ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.maxMemory()));
+    report.append(" - Allocated ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.totalMemory()));
+    report.append(" - Used ").append(HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.usedMemory()));
     report.append("\n");
 
     // JVM Uptime
