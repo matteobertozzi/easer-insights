@@ -24,10 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferWriter;
-import io.github.matteobertozzi.easerinsights.logger.Logger;
+import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
-import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
+import io.github.matteobertozzi.rednaco.collections.queues.QueueUtil;
 
 final class EaserInsightsExporterQueue {
   private final LinkedTransferQueue<byte[]> datumBuffers = new LinkedTransferQueue<>();
@@ -89,7 +89,7 @@ final class EaserInsightsExporterQueue {
     long lastFlushNs = System.nanoTime();
     while (running.get()) {
       try {
-        final byte[] page = ThreadUtil.poll(datumBuffers, 1, TimeUnit.SECONDS);
+        final byte[] page = QueueUtil.pollWithoutInterrupt(datumBuffers, 1, TimeUnit.SECONDS);
         if (page == null) {
           if ((System.nanoTime() - lastFlushNs) > TimeUnit.MINUTES.toNanos(1)) {
             lastFlushNs = System.nanoTime();

@@ -15,25 +15,8 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.logger.providers;
+package io.github.matteobertozzi.easerinsights.tracing;
 
-import io.github.matteobertozzi.easerinsights.logger.LogProvider;
-import io.github.matteobertozzi.easerinsights.logger.Logger.LogLevel;
+public interface TraceId {
 
-public final class NoOpLogProvider implements LogProvider {
-  public static final NoOpLogProvider INSTANCE = new NoOpLogProvider();
-
-  private NoOpLogProvider() {
-    // no-op
-  }
-
-  @Override
-  public void logMessage(final LogLevel level, final Throwable exception, final String format, final Object[] args) {
-    // no-op
-  }
-
-  @Override
-  public void logEntry(final LogEntry entry) {
-    // no-op
-  }
 }

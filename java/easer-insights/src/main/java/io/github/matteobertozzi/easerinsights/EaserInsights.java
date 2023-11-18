@@ -20,7 +20,7 @@ package io.github.matteobertozzi.easerinsights;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import io.github.matteobertozzi.easerinsights.logger.Logger;
+import io.github.matteobertozzi.easerinsights.logging.Logger;
 
 public final class EaserInsights implements AutoCloseable {
   public static final EaserInsights INSTANCE = new EaserInsights();

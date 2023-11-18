@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.logger;
+package io.github.matteobertozzi.easerinsights.logging;
 
 import java.lang.StackWalker.StackFrame;
 
-import io.github.matteobertozzi.easerinsights.logger.Logger.LogLevel;
+import io.github.matteobertozzi.easerinsights.logging.Logger.LogLevel;
 
 public final class LogUtil {
   private LogUtil() {

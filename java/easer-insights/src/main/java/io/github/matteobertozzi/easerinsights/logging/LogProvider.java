@@ -15,17 +15,19 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.logger;
+package io.github.matteobertozzi.easerinsights.logging;
 
 import java.io.OutputStream;
 
-import io.github.matteobertozzi.easerinsights.logger.Logger.LogLevel;
+import io.github.matteobertozzi.easerinsights.logging.Logger.LogLevel;
+import io.github.matteobertozzi.easerinsights.tracing.Span;
 
 public interface LogProvider {
-  void logMessage(LogLevel level, Throwable exception, String format, Object[] args);
+  void logMessage(Span span, LogLevel level, String format, Object[] args);
+  void logMessage(Span span, LogLevel level, Throwable exception, String format, Object[] args);
   void logEntry(LogEntry entry);
 
-  public interface LogEntry {
+  interface LogEntry {
     void writeTo(OutputStream stream);
   }
 }

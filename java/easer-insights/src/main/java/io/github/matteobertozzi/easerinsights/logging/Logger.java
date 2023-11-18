@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.logger;
+package io.github.matteobertozzi.easerinsights.logging;
 
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Supplier;
 
-import io.github.matteobertozzi.easerinsights.logger.LogProvider.LogEntry;
-import io.github.matteobertozzi.easerinsights.logger.providers.NoOpLogProvider;
+import io.github.matteobertozzi.easerinsights.logging.LogProvider.LogEntry;
+import io.github.matteobertozzi.easerinsights.logging.providers.NoOpLogProvider;
+import io.github.matteobertozzi.easerinsights.tracing.Tracer;
 import io.github.matteobertozzi.rednaco.threading.ThreadUtil.ExecutableFunction;
 
 public final class Logger {
   public static final CopyOnWriteArraySet<String> EXCLUDE_CLASSES = new CopyOnWriteArraySet<>();
+  static {
+  }
 
   // ===============================================================================================
   //  Log Provider related
@@ -60,7 +63,7 @@ public final class Logger {
   }
 
   public static void always(final String format, final Object... args) {
-    log(LogLevel.ALWAYS, null, format, args);
+    log(LogLevel.ALWAYS, format, args);
   }
 
   public static void fatal(final Throwable exception, final String format, final Object... args) {
@@ -68,7 +71,7 @@ public final class Logger {
   }
 
   public static void fatal(final String format, final Object... args) {
-    log(LogLevel.FATAL, null, format, args);
+    log(LogLevel.FATAL, format, args);
   }
 
   public static void alert(final Throwable exception, final String format, final Object... args) {
@@ -76,7 +79,7 @@ public final class Logger {
   }
 
   public static void alert(final String format, final Object... args) {
-    log(LogLevel.ALERT, null, format, args);
+    log(LogLevel.ALERT, format, args);
   }
 
   public static void critical(final Throwable exception, final String format, final Object... args) {
@@ -84,7 +87,7 @@ public final class Logger {
   }
 
   public static void critical(final String format, final Object... args) {
-    log(LogLevel.CRITICAL, null, format, args);
+    log(LogLevel.CRITICAL, format, args);
   }
 
   public static void error(final Throwable exception, final String format, final Object... args) {
@@ -92,7 +95,7 @@ public final class Logger {
   }
 
   public static void error(final String format, final Object... args) {
-    log(LogLevel.ERROR, null, format, args);
+    log(LogLevel.ERROR, format, args);
   }
 
   public static void warn(final Throwable exception, final String format, final Object... args) {
@@ -100,11 +103,11 @@ public final class Logger {
   }
 
   public static void warn(final String format, final Object... args) {
-    log(LogLevel.WARNING, null, format, args);
+    log(LogLevel.WARNING, format, args);
   }
 
   public static void warn(final String format, final Supplier<?>... args) {
-    log(LogLevel.WARNING, null, format, args);
+    log(LogLevel.WARNING, format, convertArgs(args));
   }
 
   public static void info(final Throwable exception, final String format, final Object... args) {
@@ -112,11 +115,11 @@ public final class Logger {
   }
 
   public static void info(final String format, final Object... args) {
-    log(LogLevel.INFO, null, format, args);
+    log(LogLevel.INFO, format, args);
   }
 
   public static void info(final String format, final Supplier<?>... args) {
-    log(LogLevel.INFO, null, format, args);
+    log(LogLevel.INFO, format, convertArgs(args));
   }
 
   public static void debug(final Throwable exception, final String format, final Object... args) {
@@ -124,11 +127,11 @@ public final class Logger {
   }
 
   public static void debug(final String format, final Object... args) {
-    log(LogLevel.DEBUG, null, format, args);
+    log(LogLevel.DEBUG, format, args);
   }
 
   public static void debug(final String format, final Supplier<?>... args) {
-    log(LogLevel.DEBUG, null, format, args);
+    log(LogLevel.DEBUG, format, convertArgs(args));
   }
 
   public static void trace(final Throwable exception, final String format, final Object... args) {
@@ -136,11 +139,11 @@ public final class Logger {
   }
 
   public static void trace(final String format, final Object... args) {
-    log(LogLevel.TRACE, null, format, args);
+    log(LogLevel.TRACE, format, args);
   }
 
   public static void trace(final String format, final Supplier<?>... args) {
-    log(LogLevel.TRACE, null, format, args);
+    log(LogLevel.TRACE, format, convertArgs(args));
   }
 
   public static void raw(final LogEntry entry) {
@@ -156,15 +159,19 @@ public final class Logger {
   }
 
   // ===============================================================================================
-  private static void log(final LogLevel level, final Throwable exception, final String format, final Object[] args) {
-    logProvider.logMessage(level, exception, format, args);
+  private static void log(final LogLevel level, final String format, final Object[] args) {
+    logProvider.logMessage(Tracer.getThreadLocalSpan(), level, format, args);
   }
 
-  private static void log(final LogLevel level, final Throwable exception, final String format, final Supplier<?>[] argSuppliers) {
+  private static void log(final LogLevel level, final Throwable exception, final String format, final Object[] args) {
+    logProvider.logMessage(Tracer.getThreadLocalSpan(), level, exception, format, args);
+  }
+
+  private static Object[] convertArgs(final Supplier<?>[] argSuppliers) {
     final Object[] args = new Object[argSuppliers.length];
     for (int i = 0; i < args.length; ++i) {
       args[i] = argSuppliers[i].get();
     }
-    log(level, exception, format, args);
+    return args;
   }
 }

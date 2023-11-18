@@ -29,8 +29,8 @@ import java.util.function.Function;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferEntry;
 import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.EaserInsightsExporter;
-import io.github.matteobertozzi.easerinsights.logger.Logger;
-import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
+import io.github.matteobertozzi.easerinsights.logging.Logger;
+import io.github.matteobertozzi.rednaco.collections.queues.QueueUtil;
 
 public abstract class AbstractEaserInsightsDatumExporter implements EaserInsightsExporter, EaserInsightsExporter.DatumBufferFlusher {
   private final BatchDatumExporter batchDatumExporter = new BatchDatumExporter();
@@ -88,7 +88,7 @@ public abstract class AbstractEaserInsightsDatumExporter implements EaserInsight
     public <T> void processDatumBufferAsBatch(final DatumBufferReader datumBufferReader,
         final ArrayList<T> datumBatch, final Function<DatumBufferEntry, T> transformer, final int maxBatchSize,
         final Consumer<Collection<T>> flusher) {
-      byte[] datumBuffer = ThreadUtil.poll(datumBuffers, 1, TimeUnit.SECONDS);
+      byte[] datumBuffer = QueueUtil.pollWithoutInterrupt(datumBuffers, 1, TimeUnit.SECONDS);
       while (datumBuffer != null) {
         datumBufferReader.resetPage(datumBuffer);
         while (datumBufferReader.hasNext()) {
