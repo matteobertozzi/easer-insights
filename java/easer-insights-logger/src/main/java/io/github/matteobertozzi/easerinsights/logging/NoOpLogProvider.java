@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package io.github.matteobertozzi.easerinsights.logging.providers;
+package io.github.matteobertozzi.easerinsights.logging;
 
-import io.github.matteobertozzi.easerinsights.logging.LogProvider;
 import io.github.matteobertozzi.easerinsights.logging.Logger.LogLevel;
 import io.github.matteobertozzi.easerinsights.tracing.Span;
 

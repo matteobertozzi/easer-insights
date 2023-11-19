@@ -17,7 +17,7 @@
 
 set -e
 
-PROJECT_IDS="easer-insights easer-insights-jdbc easer-insights-aws-cloudwatch example-http-service-insights"
+PROJECT_IDS="easer-insights-logger easer-insights easer-insights-jdbc easer-insights-aws-cloudwatch example-http-service-insights"
 
 op_type="BUILD"
 mvn_cmds="clean install -DskipTests"

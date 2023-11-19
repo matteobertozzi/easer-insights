@@ -23,21 +23,16 @@ import java.util.function.Consumer;
 
 import io.github.matteobertozzi.easerinsights.logging.LogUtil;
 import io.github.matteobertozzi.easerinsights.logging.Logger;
-import io.github.matteobertozzi.easerinsights.tracing.providers.Base58RandSpanId;
-import io.github.matteobertozzi.easerinsights.tracing.providers.Hex128RandTraceId;
-import io.github.matteobertozzi.easerinsights.tracing.providers.basic.BasicTracer;
 
 public final class Tracer {
-  private static TraceIdProvider traceIdProvider;
-  private static SpanIdProvider spanIdProvider;
-  private static TraceProvider traceProvider;
-  private static RootSpan nullSpan;
-
   static {
     Logger.EXCLUDE_CLASSES.add(Tracer.class.getName());
-    setTraceProvider(BasicTracer.INSTANCE);
-    setIdProviders(Hex128RandTraceId.PROVIDER, Base58RandSpanId.PROVIDER);
   }
+
+  private static TraceIdProvider traceIdProvider = NoOpTracer.TRACE_ID_PROVIDER;
+  private static SpanIdProvider spanIdProvider = NoOpTracer.SPAN_ID_PROVIDER;
+  private static TraceProvider traceProvider = NoOpTracer.INSTANCE;
+  private static RootSpan nullSpan = NoOpTracer.NULL_SPAN_INSTANCE;
 
   private Tracer() {
     // no-op

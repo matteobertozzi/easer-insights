@@ -21,14 +21,10 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Supplier;
 
 import io.github.matteobertozzi.easerinsights.logging.LogProvider.LogEntry;
-import io.github.matteobertozzi.easerinsights.logging.providers.NoOpLogProvider;
 import io.github.matteobertozzi.easerinsights.tracing.Tracer;
-import io.github.matteobertozzi.rednaco.threading.ThreadUtil.ExecutableFunction;
 
 public final class Logger {
   public static final CopyOnWriteArraySet<String> EXCLUDE_CLASSES = new CopyOnWriteArraySet<>();
-  static {
-  }
 
   // ===============================================================================================
   //  Log Provider related
@@ -150,14 +146,6 @@ public final class Logger {
     logProvider.logEntry(entry);
   }
 
-  public static void ignoreException(final String name, final String action, final ExecutableFunction r) {
-    try {
-      r.run();
-    } catch (final Throwable e) {
-      warn(e, "failed while {} was {}", name, action);
-    }
-  }
-
   // ===============================================================================================
   private static void log(final LogLevel level, final String format, final Object[] args) {
     logProvider.logMessage(Tracer.getThreadLocalSpan(), level, format, args);
@@ -173,5 +161,19 @@ public final class Logger {
       args[i] = argSuppliers[i].get();
     }
     return args;
+  }
+
+  // ===============================================================================================
+  @FunctionalInterface
+  public interface ExecutableFunction {
+    void run() throws Throwable;
+  }
+
+  public static void ignoreException(final String name, final String action, final ExecutableFunction r) {
+    try {
+      r.run();
+    } catch (final Throwable e) {
+      warn(e, "failed while {} was {}", name, action);
+    }
   }
 }

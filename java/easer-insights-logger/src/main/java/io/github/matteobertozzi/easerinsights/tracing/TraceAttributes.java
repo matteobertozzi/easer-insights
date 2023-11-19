@@ -19,8 +19,6 @@ package io.github.matteobertozzi.easerinsights.tracing;
 
 import java.util.Map;
 
-import io.github.matteobertozzi.rednaco.collections.maps.StringObjectMap;
-
 public final class TraceAttributes {
   private TraceAttributes() {
     // no-op
@@ -44,7 +42,8 @@ public final class TraceAttributes {
     }
 
     public String get(final Map<String, Object> attrs, final String defaultValue) {
-      return StringObjectMap.getString(attrs, name, defaultValue);
+      final String value = (String) attrs.get(name);
+      return value != null ? value : defaultValue;
     }
 
     public void set(final Span span, final String value) {
@@ -62,7 +61,8 @@ public final class TraceAttributes {
     }
 
     public long get(final Map<String, Object> attrs, final long defaultValue) {
-      return StringObjectMap.getLong(attrs, name, defaultValue);
+      final Long value = (Long) attrs.get(name);
+      return value != null ? value : defaultValue;
     }
 
     public void set(final Span span, final long value) {
