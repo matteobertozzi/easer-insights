@@ -474,6 +474,19 @@ public final class DbConnection implements Closeable {
     }
 
     @Override
+    public boolean execute() throws SQLException {
+      final long startTime = System.nanoTime();
+      try {
+        final boolean r = super.execute();
+        dbStats.addExecuteUpdate(sql, System.nanoTime() - startTime);
+        return r;
+      } catch (final SQLException e) {
+        dbStats.addExecuteUpdateFailure(sql, System.nanoTime() - startTime);
+        throw e;
+      }
+    }
+
+    @Override
     public String toString() {
       return "DbPreparedStatement [" + Integer.toHexString(System.identityHashCode(this)) + ", sql=" + sql + "]";
     }
