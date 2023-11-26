@@ -34,7 +34,7 @@
 
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
-    <aws-java-sdk.version>2.21.26</aws-java-sdk.version>
+    <aws-java-sdk.version>2.21.29</aws-java-sdk.version>
 
     <junit.version>5.10.1</junit.version>
 
