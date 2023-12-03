@@ -85,7 +85,7 @@ public interface Heatmap extends CollectorGauge, MetricDatumCollector {
         report.append("\n");
       }
       report.append("       +");
-      for (int i = 0, n = numIntervals; i < n; ++i) {
+      for (int i = 0; i < numIntervals; ++i) {
         report.append("----");
       }
       report.append("\n");

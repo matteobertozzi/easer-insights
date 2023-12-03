@@ -21,6 +21,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Objects;
 
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
+import io.github.matteobertozzi.rednaco.util.BuildInfo;
 
 public final class JvmMetrics {
   public static final JvmMetrics INSTANCE = new JvmMetrics();
@@ -106,11 +107,11 @@ public final class JvmMetrics {
     // Build Info
     if (buildInfo != null) {
       report.append(" - BuildInfo: ");
-      report.append(buildInfo.getName()).append(" ").append(buildInfo.getVersion());
-      report.append(" (").append(buildInfo.getBuildDate()).append(")\n");
-      report.append(" - Built by ").append(buildInfo.getCreatedBy());
-      report.append(" from ").append(buildInfo.getGitBranch());
-      report.append(" ").append(buildInfo.getGitHash());
+      report.append(buildInfo.name()).append(" ").append(buildInfo.version());
+      report.append(" (").append(buildInfo.buildDate()).append(")\n");
+      report.append(" - Built by ").append(buildInfo.createdBy());
+      report.append(" from ").append(buildInfo.gitBranch());
+      report.append(" ").append(buildInfo.gitHash());
       report.append("\n");
     }
 

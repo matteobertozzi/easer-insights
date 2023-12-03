@@ -33,7 +33,6 @@ import io.github.matteobertozzi.easerinsights.DatumBuffer.DatumBufferReader;
 import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.EaserInsights;
 import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
-import io.github.matteobertozzi.easerinsights.jvm.BuildInfo;
 import io.github.matteobertozzi.easerinsights.jvm.JvmMemoryMetrics;
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
 import io.github.matteobertozzi.easerinsights.logging.Logger;
@@ -55,6 +54,7 @@ import io.github.matteobertozzi.easerinsights.tracing.providers.basic.BasicTrace
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 import io.github.matteobertozzi.rednaco.strings.TemplateUtil;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
+import io.github.matteobertozzi.rednaco.util.BuildInfo;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -131,8 +131,8 @@ public final class DemoMain {
 
     templateVars.put("now", ZonedDateTime.now().toString());
 
-    templateVars.put("service.name", JvmMetrics.INSTANCE.buildInfo().getName());
-    templateVars.put("build.version", JvmMetrics.INSTANCE.buildInfo().getVersion() + " (" + JvmMetrics.INSTANCE.buildInfo().getBuildDate() + ")");
+    templateVars.put("service.name", JvmMetrics.INSTANCE.buildInfo().name());
+    templateVars.put("build.version", JvmMetrics.INSTANCE.buildInfo().version() + " (" + JvmMetrics.INSTANCE.buildInfo().buildDate() + ")");
     templateVars.put("service.uptime", HumansUtil.humanTimeMillis(JvmMetrics.INSTANCE.getUptime()));
 
     templateVars.put("memory.max", HumansUtil.humanBytes(JvmMemoryMetrics.INSTANCE.maxMemory()));
@@ -159,9 +159,9 @@ public final class DemoMain {
     Tracer.setTraceProvider(BasicTracer.INSTANCE);
     Tracer.setIdProviders(Hex128RandTraceId.PROVIDER, Base58RandSpanId.PROVIDER);
 
-    final BuildInfo buildInfo = BuildInfo.loadInfoFromManifest("example-http-service-insights");
-    System.out.println(buildInfo);
+    final BuildInfo buildInfo = BuildInfo.fromManifest("example-http-service-insights");
     JvmMetrics.INSTANCE.setBuildInfo(buildInfo);
+    Logger.debug("starting {}", buildInfo);
 
     EaserInsights.INSTANCE.open();
     EaserInsights.INSTANCE.addExporter(new DummyExporter());
