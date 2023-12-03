@@ -204,7 +204,7 @@ public class DbConnectionPool implements StopSignal, Closeable {
         }
 
         if (DbConnectionPool.TRACE_CONNECTION_POOL) {
-          Logger.trace("Returning {} connection isClosed={} isValid={}", conn.getId(), isClosed, isValid);
+          Logger.trace("Returning {connectionId} connection {isClosed} {isValid} open since {}", conn.getId(), isClosed, isValid, HumansUtil.humanTimeSince(conn.getOpenNs()));
         }
         return conn;
       } finally {
@@ -226,16 +226,17 @@ public class DbConnectionPool implements StopSignal, Closeable {
         while (it.hasNext()) {
           final Entry<DbInfo, DbConnection> entry = it.next();
           if (entry.getValue().isBusy()) {
-            if (isExpired(pool, entry.getValue(), now)) {
-              Logger.alert("expired connection is still busy: {}", entry.getValue());
-            } else if (forceAll) {
+            if (forceAll) {
               Logger.alert("connection is busy, but should be force-closed: {}", entry.getValue());
             } else if (isExpired(pool, entry.getValue(), now)) {
               Logger.warn("connection is expired but it's still busy");
             }
             continue;
           }
-          if (!forceAll && !isExpired(pool, entry.getValue(), now)) continue;
+
+          if (!forceAll && !isExpired(pool, entry.getValue(), now)) {
+            continue;
+          }
 
           closeConnection(pool, entry.getValue(), "cleaning up", forceAll);
           it.remove();
@@ -257,7 +258,7 @@ public class DbConnectionPool implements StopSignal, Closeable {
     }
 
     private static boolean isExpired(final DbConnectionPool pool, final DbConnection conn, final long now) {
-      return conn.isClosed() || ((now - conn.getLastUpdateNs()) >= pool.maxConnectionIdleNs);
+      return conn.isClosed() || ((now - conn.getLastUpdateNs()) >= pool.maxConnectionIdleNs) || ((now - conn.getOpenNs()) >= pool.maxConnectionOpenNs);
     }
   }
 
@@ -269,7 +270,7 @@ public class DbConnectionPool implements StopSignal, Closeable {
     @Override
     protected void runLoop() {
       while (isRunning()) {
-        if (!waitFor(60, TimeUnit.SECONDS)) {
+        if (!waitFor(Math.max(maxConnectionIdleNs, maxConnectionOpenNs), TimeUnit.NANOSECONDS)) {
           continue;
         }
         process();

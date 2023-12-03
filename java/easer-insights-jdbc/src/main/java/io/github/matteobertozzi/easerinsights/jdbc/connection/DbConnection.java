@@ -329,16 +329,13 @@ public final class DbConnection implements Closeable {
   public PreparedStatement prepareStreamingStatement(final String tableName, final int fetchSize, final String sql) throws SQLException {
     final PreparedStatement stmt = prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
     try {
-      if (this.getDbType() == DbType.MYSQL) {
-        // https://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-implementation-notes.html
-        // The combination of a forward-only, read-only result set, with a fetch size of
-        // Integer.MIN_VALUE
-        // serves as a signal to the driver to stream result sets row-by-row. After this, any result
-        // sets
+      if (this.getDbType().isMySqlCompatible()) {
+        // https://dev.mysql.com/doc/connector-j/en/connector-j-reference-implementation-notes.html
+        // The combination of a forward-only, read-only result set, with a fetch size of Integer.MIN_VALUE
+        // serves as a signal to the driver to stream result sets row-by-row. After this, any result sets
         // created with the statement will be retrieved row-by-row.
         //
-        // There are some caveats with this approach. You must read all of the rows in the result
-        // set (or close it)
+        // There are some caveats with this approach. You must read all of the rows in the result set (or close it)
         // before you can issue any other queries on the connection, or an exception will be thrown.
         stmt.setFetchSize(Integer.MIN_VALUE);
       } else {
