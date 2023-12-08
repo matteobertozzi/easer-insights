@@ -42,7 +42,7 @@ public final class EaserInsights implements AutoCloseable {
     exporterQueue.stop();
 
     while (!exporters.isEmpty()) {
-      final EaserInsightsExporter exporter = exporters.remove(exporters.size() - 1);
+      final EaserInsightsExporter exporter = exporters.removeLast();
       Logger.ignoreException(exporter.name(), "stopping", exporter::stop);
       Logger.ignoreException(exporter.name(), "closing", exporter::close);
     }
