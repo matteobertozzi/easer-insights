@@ -49,7 +49,7 @@ public class JsonLogProvider implements LogProvider {
       msgBuilder.append(" - ").append(exception.getMessage()).append(System.lineSeparator());
     }
 
-    addMessageEntry(span, level, msgBuilder.toString(), LogUtil.stackTraceToString(exception));
+    addMessageEntry(span, level, msgBuilder.toString(), exception != null ? LogUtil.stackTraceToString(exception) : null);
   }
 
   private void addMessageEntry(final Span span, final LogLevel level, final String message, final String exception) {
