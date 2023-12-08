@@ -20,6 +20,8 @@ package io.github.matteobertozzi.easerinsights.demo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -123,6 +125,10 @@ public final class DemoMain {
     }
   }
 
+  private static String buildDashboardPage() throws IOException {
+    return Files.readString(Path.of("../../dashboard-demo.html"));
+  }
+
   private static String buildMonitorPage() throws IOException {
     final String template = loadResourceAsString("webapp/monitor.html");
 
@@ -173,6 +179,10 @@ public final class DemoMain {
       },
       "/metrics/json", (ctx, req, query) -> {
         HttpServer.sendResponse(ctx, req, query, MetricsRegistry.INSTANCE.snapshot());
+      },
+      "/metrics/dashboard", (ctx, req, query) -> {
+        final String dashboard = buildDashboardPage();
+        HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.OK, HttpHeaderValues.TEXT_HTML, dashboard.getBytes(StandardCharsets.UTF_8));
       },
       "/monitor", (ctx, req, query) -> {
         final String report = buildMonitorPage();

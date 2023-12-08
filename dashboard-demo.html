@@ -19,7 +19,7 @@
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js" integrity="sha512-EmNxF3E6bM0Xg1zvmkeYD3HDBeGxtsG92IxFt1myNZhXdCav9MzvuH/zNMBU1DmIPN6njrhX1VTbqdJxQ2wHDg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style type="text/css">
     body {
       font-family: 'Roboto', serif;
@@ -36,23 +36,23 @@
       margin: 1px 2px 4px 2px;
 
       .chart { margin: 0; }
-      .label {
-        height: 16px;
-        padding-top: 4px;
-        border-bottom: 1px solid #999;
-        text-align: center;
-        font-weight: bold;
-        font-size: 12px;
-        background-color: #eee;
-      }
     }
 
-    table { border-collapse: collapse; width: 100%; font-size: 11px; }
+    .label {
+      height: 14px;
+      padding-top: 2px;
+      border-bottom: 1px solid #999;
+      text-align: center;
+      font-weight: bold;
+      font-size: 10px;
+      background-color: #eee;
+    }
+
+    table { border-collapse: collapse; width: 100%; font-size: 10px; }
     td, th { padding: 3px 5px; max-width: 700px; overflow-wrap: break-word; }
     th:not(:last-child), td:not(:last-child) { border-right: 1px solid #999; }
     tr:nth-child(even) { background-color: #f2f2f2; }
     tr:hover { background-color: #ddd; }
-    th { height: 16px; text-align: center; border-bottom: 1px solid #999; background-color: #ccc; color: #000; }
   </style>
 </head>
 <body>
@@ -60,7 +60,33 @@
   <div id="metrics"></div>
 
   <script type="module">
+    const demoTheme = {
+      color: [
+        '#5E93FF', // Series color 1
+        '#67CC90', // Series color 2
+        '#FFA663', // Series color 3
+        '#6C7CFF', // Series color 4
+        '#FF7A6A', // Series color 5
+        '#7FABF7', // Series color 6
+        '#FFBE53', // Series color 7
+        '#8C96A1', // Series color 8
+        '#69707A', // Series color 9
+        '#8EB33B', // Series color 10
+      ],
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      textStyle: { color: '#333' },
+      title: { textStyle: { color: '#333' } },
+      legend: { textStyle: { color: '#666' }, },
+      tooltip: { axisPointer: { lineStyle: { color: '#666' }, crossStyle: { color: '#666' } }, },
+      axisPointer: { lineStyle: { color: '#666' }, crossStyle: { color: '#666' } },
+      toolbox: { iconStyle: { borderColor: '#666' } },
+      dataZoom: { borderColor: 'rgba(102, 102, 102, 0.3)', dataBackground: { color: 'rgba(255, 255, 255, 0.1)' }, fillerColor: 'rgba(128, 128, 128, 0.2)' },
+      timeline: { lineStyle: { color: '#666' }, itemStyle: { color: '#5E93FF' }, controlStyle: { normal: { color: '#666' } } },
+    };
+
+    echarts.registerTheme('demoTheme', demoTheme);
     const charts = {};
+
     function newChart(name, label, options) {
       let chart = charts[name];
       if (chart) {
@@ -82,7 +108,7 @@
       nodeChart.style = "width: 490px; height: 185px;";
       node.appendChild(nodeChart);
 
-      chart = echarts.init(nodeChart);
+      chart = echarts.init(nodeChart, 'demoTheme');
       chart.setOption(options);
       window.addEventListener('resize', function() { chart.resize(); });
       charts[name] = chart;
@@ -104,20 +130,23 @@
     function renderTimeRangeCounter(metric) {
       const metricData = metric.data;
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
-      newChart(metric.name, metric.label, {
+      newChart(metricKey(metric), metric.label, {
         animation: false,
         grid: { left: 50, top: 15, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
-          data: buildDateTimeLabels(metricData.lastInterval, metricData.window, metricData.counters.length)
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
+          data: buildDateTimeLabels(metricData.lastInterval, metricData.window, metricData.counters.length),
         },
         yAxis: {
           type: 'value',
-          axisLabel: { fontSize: 8, formatter: (value) => humanConverter(value) }
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
+          axisLabel: { fontSize: 8, formatter: (value) => humanConverter(value) },
         },
         tooltip: {
           trigger: 'axis',
+          confine: true,
           position: 'inside',
           axisPointer: { type: 'shadow' },
           formatter: (data) => {
@@ -140,20 +169,23 @@
     function renderMaxAvgTimeRangeGauge(metric) {
       const metricData = metric.data;
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
-      newChart(metric.name, metric.label, {
+      newChart(metricKey(metric), metric.label, {
         animation: false,
         grid: { left: 50, top: 15, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
           data: buildDateTimeLabels(metricData.lastInterval, metricData.window, metricData.count.length)
         },
         yAxis: {
           type: 'value',
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanConverter(value) }
         },
         tooltip: {
           trigger: 'axis',
+          confine: true,
           position: 'inside',
           axisPointer: { type: 'shadow' },
           formatter: (data) => {
@@ -171,33 +203,21 @@
           {
             name: 'max',
             type: 'line',
-            itemStyle: { color: 'rgb(255, 70, 131)' },
-            areaStyle: {
-              //opacity: 0.8,
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgb(255, 0, 135)' },
-                { offset: 1, color: 'rgb(135, 0, 157)' },
-              ])
-            },
+            itemStyle: {},
+            areaStyle: {},
+            lineStyle: { width: 1 },
             emphasis: { focus: 'series' },
+            showSymbol: false,
             data: metricData.max
           },
           {
             name: 'avg',
             type: 'line',
-            itemStyle: { color: 'rgb(77, 119, 255)' },
-            areaStyle: {
-              //opacity: 0.6,
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                //{ offset: 0, color: 'rgb(128, 255, 165)' },
-                //{ offset: 1, color: 'rgb(1, 191, 236)' },
-                //{ offset: 0, color: 'rgb(55, 162, 255)' },
-                //{ offset: 1, color: 'rgb(116, 21, 219)' },
-                { offset: 0, color: 'rgb(0, 221, 255)' },
-                { offset: 1, color: 'rgb(77, 119, 255)' },
-              ])
-            },
+            itemStyle: {},
+            areaStyle: {},
+            lineStyle: { width: 1 },
             emphasis: { focus: 'series' },
+            showSymbol: false,
             data: metricData.count.map((v, index) => (v > 0) ? (metricData.sum[index] / v) : 0)
           },
         ]
@@ -213,20 +233,23 @@
 
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       const bounds = metricData.bounds.map(v => humanConverter(v));
-      newChart(metric.name, metric.label, {
+      newChart(metricKey(metric), metric.label, {
         animation: false,
         grid: { left: 50, top: 20, right: 15, bottom: 20 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
           data: bounds
         },
         yAxis: {
           type: 'value',
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanCount(value) }
         },
         tooltip: {
           trigger: 'axis',
+          confine: true,
           position: 'inside',
           axisPointer: { type: 'shadow' },
           formatter: (data) => {
@@ -267,11 +290,12 @@
         maxEvents = Math.max(maxEvents, events[i] || 0);
       }
 
-      newChart(metric.name, metric.label, {
+      newChart(metricKey(metric), metric.label, {
         animation: false,
         grid: { left: 50, top: 5, right: 5, bottom: 40 },
         tooltip: {
-          position: 'bottom',
+          confine: true,
+          position: 'inside',
           formatter: (data) => {
             const dateText = new Date(metricData.lastInterval - ((numIntervals - data.value[0]) * metricData.window)).toLocaleString();
             return metric.label + ': ' + dateText + '<br>' + bounds[data.value[1]] + ': <b>' + humanCount(data.value[2]) + '</b>';
@@ -329,7 +353,7 @@
         return;
       }
 
-      let node = document.getElementById(metric.name);
+      let node = document.getElementById(metricKey(metric));
       if (node) {
         while (node.hasChildNodes()) {
           node.removeChild(node.firstChild);
@@ -337,7 +361,7 @@
       } else {
         node = document.createElement("div");
         node.className = "metric";
-        node.id = metric.name;
+        node.id = metricKey(metric);
         document.getElementById("metrics").append(node);
       }
 
@@ -347,7 +371,7 @@
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       const columnNames = [metric.label, 'Max Timestamp', 'Max', 'Min', 'Avg', 'StdDev', 'Freq', 'Sum'];
       const columnKeys = {
-        'key': (row, k) => k,
+        'key': (row, k) => k.replaceAll('\n', ' '),
         'maxTimestamp': (row, t) => new Date(t).toLocaleString(),
         'maxValue': (row, v) => humanConverter(v),
         'minValue': (row, v) => humanConverter(v),
@@ -364,6 +388,7 @@
       nodeTable.append(nodeHeader);
       for (const column of columnNames) {
         const nodeTh = document.createElement("th");
+        nodeTh.className = 'label';
         nodeTh.innerText = column;
         nodeHeader.appendChild(nodeTh);
       }
@@ -382,10 +407,12 @@
 
     function renderCounter(metric) {
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
-      newChart(metric.name, metric.label, {
+      newChart(metricKey(metric), metric.label, {
         animation: false,
         grid: { left: 0, top: 0, right: 0, bottom: 0 },
         tooltip: {
+          confine: true,
+          position: 'inside',
           formatter: '{a} <br/>{b} : {c}'
         },
         series: [
@@ -418,34 +445,51 @@
         return;
       }
 
+      const keys = metricData.keys.slice(0, 32);
+      const vals = metricData.values.slice(0, 32);
+
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
-      const data = [];
-      for (let i = 0; i < metricData.keys.length; ++i) {
-        data.push({ name: metricData.keys[i], value: metricData.values[i] });
-      }
-      newChart(metric.name, metric.label, {
+      newChart(metricKey(metric), metric.label, {
         animation: false,
-        grid: { left: 65, top: 20, right: 30, bottom: 20 },
+        grid: { left: 50, top: 20, right: 15, bottom: 10 },
+        xAxis: {
+          type: 'category',
+          axisLabel: { show: false, fontSize: 8 },
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
+          data: keys,
+        },
+        yAxis: {
+          type: 'value',
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
+          axisLabel: { fontSize: 8, formatter: (value) => humanCount(value) }
+        },
         tooltip: {
-          trigger: 'item',
-          formatter: (v) => {
-            return v.name + '<br/>' + humanConverter(v.value) + ' (' + v.percent + '%)';
+          trigger: 'axis',
+          confine: true,
+          position: 'inside',
+          axisPointer: { type: 'shadow' },
+          formatter: (data) => {
+            const v = data[0];
+            let text = metric.label + '<br>';
+            text += v.name + ': ' + humanConverter(v.data);
+            return text;
           }
         },
         series: [{
           name: metric.name,
-          type: 'pie',
-          radius: ['20%', '56%'],
-          center: ['50%', '50%'],
-          label: { fontSize: 9 },
-          data: data,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
-          },
+          type: 'bar',
+          data: vals,
+          label: {
+            show: true,
+            position: 'insideBottom',
+            distance: 2,
+            align: 'left',
+            verticalAlign: 'middle',
+            rotate: 90,
+            formatter: '{name|{b}}',
+            fontSize: 8,
+            rich: { name: { fontSize: 8 } }
+          }
         }]
       });
     }
@@ -523,6 +567,18 @@
       'COUNTER': renderCounter,
       'COUNTER_MAP': renderCounterMap,
     };
+
+    function metricKey(metric) {
+      let metric_key = metric.name;
+      const dimensions = metric.dimensions;
+      if (dimensions) {
+        for (const key of Object.keys(dimensions).sort()) {
+          const val = dimensions[key];
+          metric_key += '/' + key + '/' + val;
+        }
+      }
+      return metric_key;
+    }
 
     async function fetchMetrics(jsonMetricsUrl) {
       const response = await fetch(jsonMetricsUrl);
