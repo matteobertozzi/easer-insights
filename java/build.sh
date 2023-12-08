@@ -31,6 +31,11 @@ if [ $# -ge 1 ]; then
       mvn_cmds="clean test"
       shift
       ;;
+    "--deploy")
+      op_type="DEPLOY"
+      mvn_cmds="clean deploy"
+      shift
+      ;;
     "--help")
       echo "build.sh [type] [projectName, ...]"
       echo "    --build   build projects (default)"
