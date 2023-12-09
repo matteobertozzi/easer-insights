@@ -20,6 +20,8 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js" integrity="sha512-EmNxF3E6bM0Xg1zvmkeYD3HDBeGxtsG92IxFt1myNZhXdCav9MzvuH/zNMBU1DmIPN6njrhX1VTbqdJxQ2wHDg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.0.0/gridstack-all.min.js" integrity="sha512-M5QJERooZoawltlxPF9jhVeh4Uwd7lhoKMd1Xj8agAtMpb1uXPQq3Wf8eJBFSp5GKmywVZnCFv9fl80D8Ln+Xw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.0.0/gridstack.min.css" integrity="sha512-7RGFdf2ChHX9XWfwf8XhFeD8PZEHmN8tAOr0To4wvYH3Umvk1Kfi6CxIb+l5oNikJ9V+ScCQW+KZRC1QSsm4ag==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style type="text/css">
     body {
       font-family: 'Roboto', serif;
@@ -49,15 +51,57 @@
     }
 
     table { border-collapse: collapse; width: 100%; font-size: 10px; }
-    td, th { padding: 3px 5px; max-width: 700px; overflow-wrap: break-word; }
-    th:not(:last-child), td:not(:last-child) { border-right: 1px solid #999; }
+    td, th { padding: 3px 3px; text-align: right; }
+    th.item-label { cursor: move; }
+    td.row-key { overflow-wrap: anywhere; text-align: left; }
+    th:not(:last-child), td:not(:last-child) { border-right: 1px solid #ddd; }
     tr:nth-child(even) { background-color: #f2f2f2; }
     tr:hover { background-color: #ddd; }
+
+    .grid-wrap { width: 100%; margin: auto; }
+    .grid-stack-item-content { border: 1px solid #999; }
+    .grid-stack > .grid-stack-item > .ui-resizable-se {
+      width: 6px;
+      height: 6px;
+      transform: none;
+      background-image: none;
+      border-right: 2px solid #555;
+      border-bottom: 2px solid #555;
+    }
+    .grid-stack > .grid-stack-item > .ui-resizable-sw {
+      width: 6px;
+      height: 6px;
+      transform: none;
+      background-image: none;
+      border-left: 2px solid #555;
+      border-bottom: 2px solid #555;
+    }
+
+    .item {
+      width: 100%; height: 100%;
+      .item-label {
+        height: 14px;
+        font-size: 10px;
+        font-weight: bold;
+        text-align: center;
+        padding-left: 4px;
+        background: #eee;
+        border-bottom: 1px solid #999;
+        cursor: move;
+      }
+      .item-body {
+        height: calc(100% - 15px);
+      }
+    }
   </style>
 </head>
 <body>
-  <div id="refreshTime"></div>
-  <div id="metrics"></div>
+  <div>
+    <span id="refreshTime"></span> - <span id="metricsCount"></span>
+  </div>
+  <div class="grid-wrap">
+    <div class="grid-stack"></div>
+  </div>
 
   <script type="module">
     const demoTheme = {
@@ -86,6 +130,17 @@
 
     echarts.registerTheme('demoTheme', demoTheme);
     const charts = {};
+    const grid = GridStack.init({
+      float: false,
+      column: 12,
+      cellHeight: 40,
+      margin: 4,
+      handle: '.item-label',
+      alwaysShowResizeHandle: true,
+      resizable: {
+        handles: 'sw,se'
+      }
+    });
 
     function newChart(name, label, options) {
       let chart = charts[name];
@@ -94,26 +149,16 @@
         return;
       }
 
-      const node = document.createElement("div");
-      node.className = "metric";
-      node.id = name;
-
-      const nodeLabel = document.createElement("div");
-      nodeLabel.className = "label";
-      nodeLabel.innerText = label;
-      node.appendChild(nodeLabel);
-
-      const nodeChart = document.createElement("div");
-      nodeChart.className = "chart";
-      nodeChart.style = "width: 490px; height: 185px;";
-      node.appendChild(nodeChart);
+      grid.addWidget({w: 4, h: 5, content: `<div class="item"><div class="item-label">${label}</div><div id='${name}' class="item-body"></div></div>`});
+      const nodeChart = document.getElementById(name);
 
       chart = echarts.init(nodeChart, 'demoTheme');
       chart.setOption(options);
       window.addEventListener('resize', function() { chart.resize(); });
       charts[name] = chart;
 
-      document.getElementById("metrics").append(node);
+      const resizeObserver = new ResizeObserver(entries => chart.resize());
+      resizeObserver.observe(nodeChart);
     }
 
     function buildDateTimeLabels(lastInterval, window, count) {
@@ -147,15 +192,13 @@
         tooltip: {
           trigger: 'axis',
           confine: true,
+          padding: 4,
           position: 'inside',
           axisPointer: { type: 'shadow' },
+          textStyle: { fontSize: 11 },
           formatter: (data) => {
-            let text = metric.label + '<br>';
-            text += new Date(metricData.lastInterval - ((metricData.counters.length - data[0].dataIndex) * metricData.window)).toLocaleString();
-            for (let i = 0; i < data.length; ++i) {
-              const v = data[i];
-              text += '<br>' + v.marker + v.seriesName + ": " + humanConverter(v.value);
-            }
+            let text = '<b>' + humanConverter(data[0].value) + '</b> ' + metric.label + '<br>';
+            text += '<b> ' + new Date(metricData.lastInterval - ((metricData.counters.length - data[0].dataIndex) * metricData.window)).toLocaleString() + '</b>';
             return text;
           }
         },
@@ -186,14 +229,16 @@
         tooltip: {
           trigger: 'axis',
           confine: true,
+          padding: 4,
           position: 'inside',
           axisPointer: { type: 'shadow' },
+          textStyle: { fontSize: 11 },
           formatter: (data) => {
             let text = metric.label + '<br>';
-            text += new Date(metricData.lastInterval - ((metricData.count.length - data[0].dataIndex) * metricData.window)).toLocaleString();
+            text += '<b>' + new Date(metricData.lastInterval - ((metricData.count.length - data[0].dataIndex) * metricData.window)).toLocaleString() + '</b>';
             for (let i = 0; i < data.length; ++i) {
               const v = data[i];
-              text += '<br>' + v.marker + v.seriesName + ": " + humanConverter(v.value);
+              text += '<br>' + v.marker + v.seriesName + ': <b>' + humanConverter(v.value) + '</b>';
             }
             return text;
           }
@@ -250,15 +295,14 @@
         tooltip: {
           trigger: 'axis',
           confine: true,
+          padding: 4,
           position: 'inside',
           axisPointer: { type: 'shadow' },
+          textStyle: { fontSize: 11 },
           formatter: (data) => {
             let text = metric.label + '<br>';
-            text += humanConverter(metricData.bounds[data[0].dataIndex]);
-            for (let i = 0; i < data.length; ++i) {
-              const v = data[i];
-              text += '<br>' + v.marker + v.seriesName + ": " + humanCount(v.value);
-            }
+            text += '<b>' + humanCount(data[0].value) + '</b> events of ';
+            text += '<b>' + humanConverter(metricData.bounds[data[0].dataIndex]) + '</b>';
             return text;
           }
         },
@@ -295,10 +339,13 @@
         grid: { left: 50, top: 5, right: 5, bottom: 40 },
         tooltip: {
           confine: true,
-          position: 'inside',
+          padding: 4,
+          textStyle: { fontSize: 11 },
           formatter: (data) => {
-            const dateText = new Date(metricData.lastInterval - ((numIntervals - data.value[0]) * metricData.window)).toLocaleString();
-            return metric.label + ': ' + dateText + '<br>' + bounds[data.value[1]] + ': <b>' + humanCount(data.value[2]) + '</b>';
+            let text = metric.label + '<br>';
+            text += new Date(metricData.lastInterval - ((numIntervals - data.value[0]) * metricData.window)).toLocaleString();
+            text += '<br><b>' + humanCount(data.value[2]) + '</b> events of <b>' + bounds[data.value[1]] + '</b>';
+            return text;
           }
         },
         xAxis: {
@@ -326,23 +373,21 @@
           textGap: 3,
           bottom: 0,
         },
-        series: [
-          {
-            name: metric.label,
-            type: 'heatmap',
-            data: data,
-            label: { show: true, fontSize: 5, formatter: v => humanCount(v.value[2]) },
-            itemStyle: { borderWidth: 0.5, borderColor: '#888' },
-            emphasis: {
-              itemStyle: {
-                borderColor: '#333',
-                borderWidth: 1,
-                shadowBlur: 10,
-                shadowColor: 'rgba(0, 0, 0, 0.5)'
-              }
+        series: [{
+          name: metric.label,
+          type: 'heatmap',
+          data: data,
+          label: { show: true, fontSize: 5, formatter: v => humanCount(v.value[2]) },
+          itemStyle: { borderWidth: 0.5, borderColor: '#888' },
+          emphasis: {
+            itemStyle: {
+              borderColor: '#333',
+              borderWidth: 1,
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
             }
           }
-        ]
+        }]
       });
     }
 
@@ -353,16 +398,16 @@
         return;
       }
 
-      let node = document.getElementById(metricKey(metric));
+      const name = metricKey(metric);
+      let node = document.getElementById(name);
       if (node) {
         while (node.hasChildNodes()) {
           node.removeChild(node.firstChild);
         }
       } else {
-        node = document.createElement("div");
-        node.className = "metric";
-        node.id = metricKey(metric);
-        document.getElementById("metrics").append(node);
+        const label = metric.label;
+        grid.addWidget({w: 8, h: 5, content: `<div id='${name}' class="item"></div>`});
+        node = document.getElementById(name);
       }
 
       const nodeTable = document.createElement("table");
@@ -388,7 +433,7 @@
       nodeTable.append(nodeHeader);
       for (const column of columnNames) {
         const nodeTh = document.createElement("th");
-        nodeTh.className = 'label';
+        nodeTh.className = 'item-label';
         nodeTh.innerText = column;
         nodeHeader.appendChild(nodeTh);
       }
@@ -399,6 +444,7 @@
         for (const key in columnKeys) {
           const keyConverter = columnKeys[key];
           let nodeTh = document.createElement("td");
+          nodeTh.className = 'row-' + key;
           nodeTh.innerText = keyConverter(row, row[key]);
           nodeRow.appendChild(nodeTh);
         }
@@ -410,31 +456,24 @@
       newChart(metricKey(metric), metric.label, {
         animation: false,
         grid: { left: 0, top: 0, right: 0, bottom: 0 },
-        tooltip: {
-          confine: true,
-          position: 'inside',
-          formatter: '{a} <br/>{b} : {c}'
-        },
-        series: [
-          {
-            name: metric.label,
-            type: 'gauge',
-            detail: {
-              valueAnimation: true,
-              fontSize: 12,
-              offsetCenter: [0, '70%'],
-              formatter: value => humanConverter(value)
-            },
-            progress: { show: true, width: 2 },
-            axisLine: { lineStyle: { width: 2 } },
-            axisTick: { show: false },
-            splitLine: { length: 5, lineStyle: { width: 1, color: '#999' } },
-            axisLabel: { distance: 6, fontSize: 8, color: '#999' },
-            anchor: { show: true, showAbove: true, size: 10, itemStyle: { borderWidth: 2 } },
-            title: { show: false },
-            data: [ { value: metric.data.value, name: metric.name } ]
-          }
-        ]
+        series: [{
+          name: metric.label,
+          type: 'gauge',
+          detail: {
+            valueAnimation: true,
+            fontSize: 12,
+            offsetCenter: [0, '70%'],
+            formatter: value => humanConverter(value)
+          },
+          progress: { show: true, width: 2 },
+          axisLine: { lineStyle: { width: 2 } },
+          axisTick: { show: false },
+          splitLine: { length: 5, lineStyle: { width: 1, color: '#999' } },
+          axisLabel: { distance: 6, fontSize: 8, color: '#999' },
+          anchor: { show: true, showAbove: true, size: 10, itemStyle: { borderWidth: 2 } },
+          title: { show: false },
+          data: [ { value: metric.data.value, name: metric.name } ]
+        }]
       });
     }
 
@@ -460,18 +499,21 @@
         },
         yAxis: {
           type: 'value',
+          type: 'log',
           splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanCount(value) }
         },
         tooltip: {
           trigger: 'axis',
           confine: true,
+          padding: 4,
           position: 'inside',
+          textStyle: { fontSize: 11 },
           axisPointer: { type: 'shadow' },
           formatter: (data) => {
             const v = data[0];
             let text = metric.label + '<br>';
-            text += v.name + ': ' + humanConverter(v.data);
+            text += v.name + ': <b>' + humanConverter(v.data) + '</b>';
             return text;
           }
         },
@@ -479,17 +521,6 @@
           name: metric.name,
           type: 'bar',
           data: vals,
-          label: {
-            show: true,
-            position: 'insideBottom',
-            distance: 2,
-            align: 'left',
-            verticalAlign: 'middle',
-            rotate: 90,
-            formatter: '{name|{b}}',
-            fontSize: 8,
-            rich: { name: { fontSize: 8 } }
-          }
         }]
       });
     }
@@ -583,7 +614,8 @@
     async function fetchMetrics(jsonMetricsUrl) {
       const response = await fetch(jsonMetricsUrl);
       const metrics = await response.json();
-      document.getElementById("refreshTime").innerText = new Date().toLocaleString();
+      document.getElementById('refreshTime').innerText = new Date().toLocaleString();
+      document.getElementById('metricsCount').innerText = metrics.length + ' metrics';
       for (const metric of metrics.sort((a, b) => a.name.localeCompare(b.name))) {
         const renderer = METRIC_RENDERERS[metric.type];
         //console.log(metric);
