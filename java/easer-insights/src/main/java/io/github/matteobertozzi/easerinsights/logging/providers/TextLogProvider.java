@@ -82,6 +82,6 @@ public class TextLogProvider implements LogProvider {
 
   @Override
   public void logEntry(final LogEntry entry) {
-    entry.writeTo(stream);
+    entry.writeTextTo(stream);
   }
 }
