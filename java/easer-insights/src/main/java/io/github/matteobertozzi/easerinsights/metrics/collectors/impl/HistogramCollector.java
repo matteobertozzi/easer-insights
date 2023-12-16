@@ -33,6 +33,14 @@ public class HistogramCollector implements MetricCollector, Histogram {
     this.metricId = metricId;
   }
 
+  public static Histogram newSingleThreaded(final long[] bounds) {
+    return new HistogramImplSt(bounds);
+  }
+
+  public static Histogram newMultiThreaded(final long[] bounds) {
+    return new HistogramImplMt(bounds);
+  }
+
   @Override
   public void sample(final long timestamp, final long value) {
     collector.sample(timestamp, value);

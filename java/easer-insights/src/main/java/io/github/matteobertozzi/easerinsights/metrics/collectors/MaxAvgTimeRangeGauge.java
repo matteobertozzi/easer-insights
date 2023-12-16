@@ -24,17 +24,15 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.MaxAvgTimeRangeGaugeImplSt;
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface MaxAvgTimeRangeGauge extends CollectorGauge, MetricDatumCollector {
   static MaxAvgTimeRangeGauge newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
-    return new MaxAvgTimeRangeGaugeImplSt(maxInterval, window, unit);
+    return MaxAvgTimeRangeGaugeCollector.newSingleThreaded(maxInterval, window, unit);
   }
 
   static MaxAvgTimeRangeGauge newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
-    return new MaxAvgTimeRangeGaugeImplMt(maxInterval, window, unit);
+    return MaxAvgTimeRangeGaugeCollector.newMultiThreaded(maxInterval, window, unit);
   }
 
   @Override

@@ -17,6 +17,8 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
+import java.util.concurrent.TimeUnit;
+
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
@@ -31,6 +33,14 @@ public class HeatmapCollector implements MetricCollector, Heatmap {
     this.definition = definition;
     this.collector = collector;
     this.metricId = metricId;
+  }
+
+  public static Heatmap newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
+    return new HeatmapImplSt(maxInterval, window, unit, bounds);
+  }
+
+  public static Heatmap newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
+    return new HeatmapImplMt(maxInterval, window, unit, bounds);
   }
 
   @Override

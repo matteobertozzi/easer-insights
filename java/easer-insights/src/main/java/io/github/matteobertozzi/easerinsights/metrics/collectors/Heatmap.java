@@ -24,21 +24,15 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HeatmapImplSt;
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface Heatmap extends CollectorGauge, MetricDatumCollector {
   static Heatmap newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
-    return new HeatmapImplSt(maxInterval, window, unit, bounds);
+    return HeatmapCollector.newSingleThreaded(maxInterval, window, unit, bounds);
   }
 
   static Heatmap newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
-    return new HeatmapImplMt(maxInterval, window, unit, bounds);
-  }
-
-  static Heatmap newCollector(final MetricDefinition definition, final Heatmap heatmap, final int metricId) {
-    return new HeatmapCollector(definition, heatmap, metricId);
+    return HeatmapCollector.newMultiThreaded(maxInterval, window, unit, bounds);
   }
 
   @Override
@@ -85,9 +79,7 @@ public interface Heatmap extends CollectorGauge, MetricDatumCollector {
         report.append("\n");
       }
       report.append("       +");
-      for (int i = 0; i < numIntervals; ++i) {
-        report.append("----");
-      }
+      report.append('-' * numIntervals * 4);
       report.append("\n");
       report.append("        25%:").append(HumansUtil.humanCount(e25));
       report.append(", 50%:").append(HumansUtil.humanCount(e50));

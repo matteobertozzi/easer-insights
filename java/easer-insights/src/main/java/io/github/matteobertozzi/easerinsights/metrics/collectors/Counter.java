@@ -22,17 +22,15 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterImplSt;
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface Counter extends CollectorCounter, MetricDatumCollector {
   static Counter newSingleThreaded() {
-    return new CounterImplSt();
+    return CounterCollector.newSingleThreaded();
   }
 
   static Counter newMultiThreaded() {
-    return new CounterImplMt();
+    return CounterCollector.newMultiThreaded();
   }
 
   @Override

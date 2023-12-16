@@ -20,7 +20,7 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class MaxAvgTimeRangeGaugeImplMt extends MaxAvgTimeRangeGaugeImplSt {
+class MaxAvgTimeRangeGaugeImplMt extends MaxAvgTimeRangeGaugeImplSt {
   // TODO: bring back the striped-lock implementation
   private final ReentrantLock lock = new ReentrantLock(true);
 

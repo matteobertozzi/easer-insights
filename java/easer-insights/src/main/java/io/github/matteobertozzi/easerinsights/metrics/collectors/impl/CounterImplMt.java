@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Counter;
 
-public class CounterImplMt implements Counter {
+class CounterImplMt implements Counter {
   private final LongAdder counter = new LongAdder();
   private long lastUpdate;
 

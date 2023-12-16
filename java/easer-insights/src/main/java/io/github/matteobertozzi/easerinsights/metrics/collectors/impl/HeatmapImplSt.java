@@ -1,20 +1,3 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
 import java.util.Arrays;
@@ -23,13 +6,16 @@ import java.util.concurrent.TimeUnit;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Heatmap;
 import io.github.matteobertozzi.rednaco.collections.arrays.ArrayUtil;
 import io.github.matteobertozzi.rednaco.time.TimeRange;
+import io.github.matteobertozzi.rednaco.time.TimeRange.ResetTimeRangeSlots;
+import io.github.matteobertozzi.rednaco.time.TimeRange.UpdateTimeRangeSlot;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
-public class HeatmapImplSt implements Heatmap {
+public class HeatmapImplSt implements Heatmap, ResetTimeRangeSlots, UpdateTimeRangeSlot {
   private final TimeRange timeRange;
   private final long[] bounds;
   private final long[] ring;
   private final int totalSlots;
+  private long newValue;
 
   public HeatmapImplSt(final long maxInterval, final long window, final TimeUnit unit, final long[] bounds) {
     this.timeRange = new TimeRange(Math.toIntExact(unit.toMillis(window)), 0);
@@ -43,19 +29,24 @@ public class HeatmapImplSt implements Heatmap {
 
   @Override
   public void sample(final long timestamp, final long value) {
-    final int boundIndex = findBoundIndex(value);
-    timeRange.update(timestamp, totalSlots, this::resetSlots, slotIndex -> {
-      final int ringIndex = slotIndex * (bounds.length + 5);
-      //System.out.println(" -> UPDATE slotIndex:" + slotIndex + " ringIndex:" + ringIndex + " boundIndex:" + boundIndex);
-      ring[ringIndex] = Math.min(ring[ringIndex], value);
-      ring[ringIndex + 1] = Math.max(ring[ringIndex + 1], value);
-      ring[ringIndex + 2] += value;
-      ring[ringIndex + 3] += value * value;
-      ring[ringIndex + 4 + boundIndex]++;
-    });
+    newValue = value;
+    timeRange.update(timestamp, totalSlots, this, this);
   }
 
-  private void resetSlots(final int fromIndex, final int toIndex) {
+  @Override
+  public void updateTimeRangeSlot(final int slotIndex) {
+    final int boundIndex = findBoundIndex(newValue);
+    final int ringIndex = slotIndex * (bounds.length + 5);
+    //System.out.println(" -> UPDATE slotIndex:" + slotIndex + " ringIndex:" + ringIndex + " boundIndex:" + boundIndex);
+    ring[ringIndex] = Math.min(ring[ringIndex], newValue);
+    ring[ringIndex + 1] = Math.max(ring[ringIndex + 1], newValue);
+    ring[ringIndex + 2] += newValue;
+    ring[ringIndex + 3] += newValue * newValue;
+    ring[ringIndex + 4 + boundIndex]++;
+  }
+
+  @Override
+  public void resetTimeRangeSlots(final int fromIndex, final int toIndex) {
     final int resetLength = toIndex - fromIndex;
     final int stride = bounds.length + 5;
     //System.out.println("resetSlots: " + resetLength + " from: " + fromIndex);
@@ -78,7 +69,7 @@ public class HeatmapImplSt implements Heatmap {
   public HeatmapSnapshot dataSnapshot() {
     final int stride = bounds.length + 5;
     final long now = TimeUtil.currentEpochMillis();
-    timeRange.update(now, totalSlots, this::resetSlots);
+    timeRange.update(now, totalSlots, this);
 
     // compute bounds
     long lastBound = 0;

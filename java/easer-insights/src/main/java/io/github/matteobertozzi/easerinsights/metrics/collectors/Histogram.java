@@ -22,22 +22,16 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.HistogramImplSt;
 import io.github.matteobertozzi.rednaco.math.Statistics;
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface Histogram extends CollectorGauge, MetricDatumCollector {
   static Histogram newSingleThreaded(final long[] bounds) {
-    return new HistogramImplSt(bounds);
+    return HistogramCollector.newSingleThreaded(bounds);
   }
 
   static Histogram newMultiThreaded(final long[] bounds) {
-    return new HistogramImplMt(bounds);
-  }
-
-  static Histogram newCollector(final MetricDefinition definition, final Histogram histogram, final int metricId) {
-    return new HistogramCollector(definition, histogram, metricId);
+    return HistogramCollector.newMultiThreaded(bounds);
   }
 
   @Override
@@ -119,8 +113,8 @@ public interface Histogram extends CollectorGauge, MetricDatumCollector {
             (mult * cumulativeSum)));
 
         // Add hash marks based on percentage
-        final long marks = Math.round(mult * bucketValue / 5 + 0.5);
-        for (int i = 0; i < marks; ++i) report.append('#');
+        final int marks = (int) Math.round(mult * bucketValue / 5 + 0.5);
+        report.repeat('#', marks);
         report.append('\n');
       }
       return report;

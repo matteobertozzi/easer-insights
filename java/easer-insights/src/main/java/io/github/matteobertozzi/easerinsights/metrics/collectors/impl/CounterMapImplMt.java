@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.CounterMap;
 
-public class CounterMapImplMt implements CounterMap {
+class CounterMapImplMt implements CounterMap {
   private final ConcurrentHashMap<String, LongAdder> counterMap = new ConcurrentHashMap<>();
 
   public CounterMapImplMt() {

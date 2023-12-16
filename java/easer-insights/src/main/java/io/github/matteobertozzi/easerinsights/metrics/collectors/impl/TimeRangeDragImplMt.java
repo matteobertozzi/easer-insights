@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter.TimeRangeCounterSnapshot;
 
-public class TimeRangeDragImplMt extends TimeRangeDragImplSt {
+class TimeRangeDragImplMt extends TimeRangeDragImplSt {
   // TODO: bring back the striped-lock implementation
   private final ReentrantLock lock = new ReentrantLock(true);
 

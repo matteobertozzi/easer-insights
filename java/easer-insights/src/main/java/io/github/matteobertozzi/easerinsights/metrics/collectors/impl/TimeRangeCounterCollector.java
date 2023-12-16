@@ -17,6 +17,8 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
+import java.util.concurrent.TimeUnit;
+
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
@@ -31,6 +33,14 @@ public class TimeRangeCounterCollector implements MetricCollector, TimeRangeCoun
     this.definition = definition;
     this.collector = collector;
     this.metricId = metricId;
+  }
+
+  public static TimeRangeCounter newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+    return new TimeRangeCounterImplSt(maxInterval, window, unit);
+  }
+
+  public static TimeRangeCounter newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+    return new TimeRangeCounterImplMt(maxInterval, window, unit);
   }
 
   @Override
