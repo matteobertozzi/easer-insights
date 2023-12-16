@@ -19,7 +19,7 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
 
-public class HistogramImplSt implements Histogram {
+class HistogramImplSt implements Histogram {
   private final long[] bounds;
   private final long[] events;
   private long minValue;

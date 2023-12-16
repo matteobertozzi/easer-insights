@@ -33,6 +33,14 @@ public class CounterMapCollector implements MetricCollector, CounterMap {
     this.metricId = metricId;
   }
 
+  public static CounterMap newSingleThreaded() {
+    return new CounterMapImplSt();
+  }
+
+  public static CounterMap newMultiThreaded() {
+    return new CounterMapImplMt();
+  }
+
   @Override
   public void add(final String key, final long timestamp, final long delta) {
     collector.add(key, timestamp, delta);

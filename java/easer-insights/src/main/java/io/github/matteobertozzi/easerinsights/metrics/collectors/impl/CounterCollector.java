@@ -33,6 +33,14 @@ public class CounterCollector implements MetricCollector, Counter {
     this.metricId = metricId;
   }
 
+  public static Counter newSingleThreaded() {
+    return new CounterImplSt();
+  }
+
+  public static Counter newMultiThreaded() {
+    return new CounterImplMt();
+  }
+
   @Override
   public void add(final long timestamp, final long delta) {
     collector.add(timestamp, delta);

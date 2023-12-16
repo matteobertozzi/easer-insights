@@ -22,13 +22,20 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
+import io.github.matteobertozzi.easerinsights.tracing.Tracer;
 import io.github.matteobertozzi.rednaco.time.TimeRange;
+import io.github.matteobertozzi.rednaco.time.TimeRange.ResetTimeRangeSlots;
+import io.github.matteobertozzi.rednaco.time.TimeRange.UpdateTimeRangeSlot;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
-public class TopKImplSt implements TopK {
+public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlot {
   private final TopList[] slots;
   private final TimeRange timeRange;
   private final int k;
+
+  private String newKey;
+  private long newTimestamp;
+  private long newValue;
 
   public TopKImplSt(final int k, final long maxInterval, final long window, final TimeUnit unit) {
     this.timeRange = new TimeRange(Math.toIntExact(unit.toMillis(window)), 0);
@@ -43,10 +50,21 @@ public class TopKImplSt implements TopK {
 
   @Override
   public void sample(final String key, final long timestamp, final long value) {
-    timeRange.update(timestamp, slots.length, this::resetSlots, slotIndex -> slots[slotIndex].add(key, timestamp, value));
+    newKey = key;
+    newTimestamp = timestamp;
+    newValue = value;
+    timeRange.update(timestamp, slots.length, this, this);
+    newKey = null;
   }
 
-  private void resetSlots(final int fromIndex, final int toIndex) {
+
+  @Override
+  public void updateTimeRangeSlot(final int slotIndex) {
+    slots[slotIndex].add(newKey, newTimestamp, newValue);
+  }
+
+  @Override
+  public void resetTimeRangeSlots(final int fromIndex, final int toIndex) {
     for (int i = fromIndex; i < toIndex; ++i) {
       slots[i].clear();
     }
@@ -55,7 +73,7 @@ public class TopKImplSt implements TopK {
   @Override
   public TopKSnapshot dataSnapshot() {
     final long now = TimeUtil.currentEpochMillis();
-    timeRange.update(now, slots.length, this::resetSlots);
+    timeRange.update(now, slots.length, this);
 
     final TopList topEntries = new TopList(k);
     timeRange.iterReverse(slots.length, index -> topEntries.merge(slots[index]));
@@ -63,13 +81,15 @@ public class TopKImplSt implements TopK {
     final TopEntrySnapshot[] entries = new TopEntrySnapshot[topEntries.size()];
     for (int i = 0; i < entries.length; ++i) {
       final TopEntry entry = topEntries.entries[i];
-      entries[i] = new TopEntrySnapshot(entry.key, entry.maxTimestamp, entry.maxValue, entry.minValue, entry.sum, entry.sumSquares, entry.count);
+      entries[i] = new TopEntrySnapshot(entry.key, entry.maxTimestamp, entry.maxValue, entry.minValue, entry.sum, entry.sumSquares, entry.count, entry.traceIds);
     }
     return new TopKSnapshot(entries);
   }
 
-  public static final class TopEntry implements Comparable<TopEntry> {
+  private static final class TopEntry implements Comparable<TopEntry> {
+    private final String[] traceIds = new String[8];
     private String key;
+    private long traceIdOffset;
     private long maxTimestamp;
     private long maxValue;
     private long minValue;
@@ -86,6 +106,7 @@ public class TopKImplSt implements TopK {
     }
 
     private TopEntry reset(final String key) {
+      Arrays.fill(traceIds, null);
       this.key = key;
       this.maxTimestamp = 0;
       this.maxValue = Long.MIN_VALUE;
@@ -93,11 +114,13 @@ public class TopKImplSt implements TopK {
       this.sumSquares = 0;
       this.sum = 0;
       this.count = 0;
+      this.traceIdOffset = 0;
       return this;
     }
 
     private void update(final long timestamp, final long value) {
       if (value >= this.maxValue) {
+        this.traceIds[(int)(this.traceIdOffset++ & 7)] = Tracer.getThreadLocalSpan().traceId().toString();
         this.maxTimestamp = timestamp;
         this.maxValue = value;
       }
@@ -116,6 +139,23 @@ public class TopKImplSt implements TopK {
       this.sumSquares += other.sumSquares;
       this.sum += other.sum;
       this.count += other.count;
+
+      if (traceIdOffset != traceIds.length) {
+        mergeTraceIds(other);
+      }
+    }
+
+    private void mergeTraceIds(final TopEntry other) {
+      if (other.traceIdOffset > traceIds.length) {
+        final int index = (int) (other.traceIdOffset - traceIds.length);
+        for (int i = 0; i < index && traceIdOffset < traceIds.length; ++i) {
+          this.traceIds[(int)traceIdOffset++] = other.traceIds[i];
+        }
+      } else {
+        for (int i = (int)(other.traceIdOffset - 1); i >= 0 && traceIdOffset < traceIds.length; --i) {
+          this.traceIds[(int)traceIdOffset++] = other.traceIds[i];
+        }
+      }
     }
 
     @Override

@@ -21,7 +21,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-public class HistogramImplMt extends HistogramImplSt {
+class HistogramImplMt extends HistogramImplSt {
   // TODO: bring back the striped-lock implementation
   private final ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock(true);
 

@@ -24,18 +24,16 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterMapCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterMapImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.CounterMapImplSt;
 import io.github.matteobertozzi.rednaco.collections.arrays.ArraySortUtil;
 import io.github.matteobertozzi.rednaco.collections.arrays.ArrayUtil;
 
 public interface CounterMap extends CollectorKeyCounter, MetricDatumCollector {
   static CounterMap newSingleThreaded() {
-    return new CounterMapImplSt();
+    return CounterMapCollector.newSingleThreaded();
   }
 
   static CounterMap newMultiThreaded() {
-    return new CounterMapImplMt();
+    return CounterMapCollector.newMultiThreaded();
   }
 
   @Override

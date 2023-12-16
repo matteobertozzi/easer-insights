@@ -19,7 +19,7 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Counter;
 
-public class CounterImplSt implements Counter {
+class CounterImplSt implements Counter {
   private long counter;
   private long lastUpdate;
 

@@ -24,16 +24,14 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter.TimeRangeCounterSnapshot;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeDragCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeDragImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TimeRangeDragImplSt;
 
 public interface TimeRangeDrag extends CollectorCounter, MetricDatumCollector {
   static TimeRangeDrag newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
-    return new TimeRangeDragImplSt(maxInterval, window, unit);
+    return TimeRangeDragCollector.newSingleThreaded(maxInterval, window, unit);
   }
 
   static TimeRangeDrag newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
-    return new TimeRangeDragImplMt(maxInterval, window, unit);
+    return TimeRangeDragCollector.newMultiThreaded(maxInterval, window, unit);
   }
 
   @Override

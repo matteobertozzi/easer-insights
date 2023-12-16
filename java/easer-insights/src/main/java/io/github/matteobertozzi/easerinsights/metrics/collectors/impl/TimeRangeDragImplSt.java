@@ -25,7 +25,7 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeDrag;
 import io.github.matteobertozzi.rednaco.collections.arrays.ArrayUtil;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
-public class TimeRangeDragImplSt implements TimeRangeDrag {
+class TimeRangeDragImplSt implements TimeRangeDrag {
   private final long[] counters;
   private final int window;
   private long lastInterval;

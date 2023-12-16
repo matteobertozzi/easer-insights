@@ -17,6 +17,8 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
+import java.util.concurrent.TimeUnit;
+
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
@@ -31,6 +33,14 @@ public class TopKCollector implements MetricCollector, TopK {
     this.definition = definition;
     this.collector = collector;
     this.metricId = metricId;
+  }
+
+  public static TopK newSingleThreaded(final int k, final long maxInterval, final long window, final TimeUnit unit) {
+    return new TopKImplSt(k, maxInterval, window, unit);
+  }
+
+  public static TopK newMultiThreaded(final int k, final long maxInterval, final long window, final TimeUnit unit) {
+    return new TopKImplMt(k, maxInterval, window, unit);
   }
 
   @Override

@@ -20,8 +20,7 @@ package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class TopKImplMt extends TopKImplSt {
-  // TODO: bring back the striped-lock implementation
+class TopKImplMt extends TopKImplSt {
   private final ReentrantLock lock = new ReentrantLock(true);
 
   public TopKImplMt(final int k, final long maxInterval, final long window, final TimeUnit unit) {

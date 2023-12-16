@@ -22,7 +22,7 @@ import java.util.Map.Entry;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.CounterMap;
 
-public class CounterMapImplSt implements CounterMap {
+class CounterMapImplSt implements CounterMap {
   private final HashMap<String, Long> counterMap = new HashMap<>();
 
   public CounterMapImplSt() {

@@ -17,6 +17,8 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
+import java.util.concurrent.TimeUnit;
+
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
@@ -32,6 +34,14 @@ public class TimeRangeDragCollector implements MetricCollector, TimeRangeDrag {
     this.definition = definition;
     this.collector = collector;
     this.metricId = metricId;
+  }
+
+  public static TimeRangeDrag newSingleThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+    return new TimeRangeDragImplSt(maxInterval, window, unit);
+  }
+
+  public static TimeRangeDrag newMultiThreaded(final long maxInterval, final long window, final TimeUnit unit) {
+    return new TimeRangeDragImplMt(maxInterval, window, unit);
   }
 
   @Override

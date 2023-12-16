@@ -17,6 +17,7 @@
 
 package io.github.matteobertozzi.easerinsights.metrics.collectors;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -25,18 +26,16 @@ import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TopKCollector;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TopKImplMt;
-import io.github.matteobertozzi.easerinsights.metrics.collectors.impl.TopKImplSt;
 import io.github.matteobertozzi.rednaco.strings.HumansTableView;
 import io.github.matteobertozzi.rednaco.strings.HumansUtil;
 
 public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
   static TopK newSingleThreaded(final int k, final long maxInterval, final long window, final TimeUnit unit) {
-    return new TopKImplSt(k, maxInterval, window, unit);
+    return TopKCollector.newSingleThreaded(k, maxInterval, window, unit);
   }
 
   static TopK newMultiThreaded(final int k, final long maxInterval, final long window, final TimeUnit unit) {
-    return new TopKImplMt(k, maxInterval, window, unit);
+    return TopKCollector.newMultiThreaded(k, maxInterval, window, unit);
   }
 
   @Override
@@ -49,7 +48,7 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
   // ====================================================================================================
   @Override TopKSnapshot dataSnapshot();
 
-  record TopEntrySnapshot (String key, long maxTimestamp, long maxValue, long minValue, long sum, long sumSquares, long count) {
+  record TopEntrySnapshot (String key, long maxTimestamp, long maxValue, long minValue, long sum, long sumSquares, long count, String[] traceIds) {
     public double average() {
       if (count == 0) return 0;
       return (double) sum / count;
@@ -71,7 +70,7 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
   record TopKSnapshot (TopEntrySnapshot[] entries) implements MetricDataSnapshot {
     public static final TopKSnapshot EMPTY_SNAPSHOT = new TopKSnapshot(new TopEntrySnapshot[0]);
 
-    private static final List<String> HEADER = List.of("", "Max Timestamp", "Max", "Min", "Avg", "StdDev", "Freq");
+    private static final List<String> HEADER = List.of("", "Max Timestamp", "Max", "Min", "Avg", "StdDev", "Freq", "TraceIds");
 
     @Override
     public StringBuilder addToHumanReport(final MetricDefinition metricDefinition, final StringBuilder report) {
@@ -89,7 +88,8 @@ public interface TopK extends MetricDatumCollector, CollectorKeyGauge {
           unitConverter.asHumanString(entry.maxValue()), unitConverter.asHumanString(entry.minValue()),
           unitConverter.asHumanString(Math.round(entry.average())),
           unitConverter.asHumanString(Math.round(entry.standardDeviation())),
-          HumansUtil.humanCount(entry.count())
+          HumansUtil.humanCount(entry.count()),
+          Arrays.toString(entry.traceIds())
         ));
       }
       return table.addHumanView(report);
