@@ -28,6 +28,6 @@ public interface LogProvider {
   void logEntry(LogEntry entry);
 
   interface LogEntry {
-    void writeTo(OutputStream stream);
+    void writeTextTo(OutputStream stream);
   }
 }
