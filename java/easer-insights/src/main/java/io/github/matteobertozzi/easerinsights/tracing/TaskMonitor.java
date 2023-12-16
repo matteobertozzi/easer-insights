@@ -65,6 +65,7 @@ public final class TaskMonitor {
         recentlyCompleted.removeLast();
       }
       recentlyCompleted.addFirst(span);
+      topSlowTasks.sample(span.name(), span.elapsedNanos());
     }
   }
 
