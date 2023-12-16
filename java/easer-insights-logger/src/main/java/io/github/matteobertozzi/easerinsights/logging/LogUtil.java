@@ -67,13 +67,19 @@ public final class LogUtil {
     return appendStackTrace(new StringBuilder(512), exception).toString();
   }
 
+  public static String stackTraceToString(final StackTraceElement[] stackTrace, final int fromLevel) {
+    return appendStackTrace(new StringBuilder(), stackTrace, fromLevel).toString();
+  }
+
   public static StringBuilder appendStackTrace(final StringBuilder builder, final Throwable exception) {
     builder.append(exception.getClass().getName()).append(": ").append(exception.getMessage()).append(System.lineSeparator());
+    return appendStackTrace(builder, exception.getStackTrace(), 0);
+  }
 
-    final StackTraceElement[] stackTrace = exception.getStackTrace();
+  public static StringBuilder appendStackTrace(final StringBuilder builder, final StackTraceElement[] stackTrace, final int fromLevel) {
     if (stackTrace == null) return builder;
 
-    for (int i = 0; i < stackTrace.length; ++i) {
+    for (int i = fromLevel; i < stackTrace.length; ++i) {
       final StackTraceElement st = stackTrace[i];
       builder.append("\tat ").append(st.getClassName()).append('.').append(st.getMethodName());
       builder.append('(').append(st.getFileName()).append(':').append(st.getLineNumber()).append(')');
