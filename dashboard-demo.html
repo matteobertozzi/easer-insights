@@ -27,29 +27,6 @@
       font-family: 'Roboto', serif;
     }
 
-    #metrics {
-      width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-    }
-
-    .metric {
-      border: 1px solid #999;
-      margin: 1px 2px 4px 2px;
-
-      .chart { margin: 0; }
-    }
-
-    .label {
-      height: 14px;
-      padding-top: 2px;
-      border-bottom: 1px solid #999;
-      text-align: center;
-      font-weight: bold;
-      font-size: 10px;
-      background-color: #eee;
-    }
-
     table { border-collapse: collapse; width: 100%; font-size: 10px; }
     td, th { padding: 3px 3px; text-align: right; }
     th.item-label { cursor: move; }
@@ -186,6 +163,7 @@
         },
         yAxis: {
           type: 'value',
+          minInterval: 1,
           splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanConverter(value) },
         },
@@ -223,6 +201,7 @@
         },
         yAxis: {
           type: 'value',
+          minInterval: 1,
           splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanConverter(value) }
         },
@@ -234,8 +213,10 @@
           axisPointer: { type: 'shadow' },
           textStyle: { fontSize: 11 },
           formatter: (data) => {
+            const dataIndex = data[0].dataIndex;
             let text = metric.label + '<br>';
-            text += '<b>' + new Date(metricData.lastInterval - ((metricData.count.length - data[0].dataIndex) * metricData.window)).toLocaleString() + '</b>';
+            text += '<b>' + new Date(metricData.lastInterval - ((metricData.count.length - dataIndex) * metricData.window)).toLocaleString() + '</b>';
+            text += '<br><b>' + humanCount(metricData.count[dataIndex]) + '</b> events, sum <b>' + humanConverter(metricData.sum[dataIndex]) + '</b>';
             for (let i = 0; i < data.length; ++i) {
               const v = data[i];
               text += '<br>' + v.marker + v.seriesName + ': <b>' + humanConverter(v.value) + '</b>';
@@ -249,7 +230,7 @@
             name: 'max',
             type: 'line',
             itemStyle: {},
-            areaStyle: {},
+            areaStyle: {opacity: 0.8 },
             lineStyle: { width: 1 },
             emphasis: { focus: 'series' },
             showSymbol: false,
@@ -259,7 +240,7 @@
             name: 'avg',
             type: 'line',
             itemStyle: {},
-            areaStyle: {},
+            areaStyle: { opacity: 0.8 },
             lineStyle: { width: 1 },
             emphasis: { focus: 'series' },
             showSymbol: false,
@@ -289,6 +270,7 @@
         },
         yAxis: {
           type: 'value',
+          minInterval: 1,
           splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanCount(value) }
         },
@@ -323,6 +305,7 @@
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       const bounds = metricData.bounds.map(v => humanConverter(v));
 
+      let minEvents = Number.MAX_VALUE;
       let maxEvents = 0;
       const data = [];
       const events = metricData.events;
@@ -332,11 +315,17 @@
         const y = i % bounds.length;
         data.push([x, y, events[i] || '-']);
         maxEvents = Math.max(maxEvents, events[i] || 0);
+        if (events[i] >= 1) {
+          minEvents = Math.min(minEvents, events[i]);
+        }
+      }
+      if (minEvents >= maxEvents) {
+        minEvents = 0;
       }
 
       newChart(metricKey(metric), metric.label, {
         animation: false,
-        grid: { left: 50, top: 5, right: 5, bottom: 40 },
+        grid: { left: 50, top: 5, right: 5, bottom: 35 },
         tooltip: {
           confine: true,
           padding: 4,
@@ -357,6 +346,7 @@
         yAxis: {
           type: 'category',
           data: bounds,
+          minInterval: 1,
           axisLabel: { fontSize: 8 },
           splitArea: { show: true }
         },
@@ -366,9 +356,15 @@
           type: 'piecewise',
           orient: 'horizontal',
           left: 'center',
-          min: 0,
+          min: minEvents,
           max: maxEvents,
           calculable: true,
+          realtime: false,
+
+          splitNumber: 8,
+          itemSymbol: 'circle',
+          itemHeight: 8,
+          itemWidth: 8,
           itemGap: 8,
           textGap: 3,
           bottom: 0,
@@ -377,7 +373,7 @@
           name: metric.label,
           type: 'heatmap',
           data: data,
-          label: { show: true, fontSize: 5, formatter: v => humanCount(v.value[2]) },
+          label: { show: false, fontSize: 5, formatter: v => humanCount(v.value[2]) },
           itemStyle: { borderWidth: 0.5, borderColor: '#888' },
           emphasis: {
             itemStyle: {
@@ -388,6 +384,121 @@
             }
           }
         }]
+      });
+    }
+
+    function renderHeatmapTimeRangeGauge(metric) {
+      const metricData = metric.data;
+      const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
+      const bounds = metricData.bounds.map(v => humanConverter(v));
+
+      const events = metricData.events;
+      const numIntervals = events.length / bounds.length;
+
+      const p75 = [];
+      const p99 = [];
+      for (let i = 0; i < numIntervals; ++i) {
+        let numEvents = 0;
+        for (let b = 0; b < bounds.length; ++b) {
+          numEvents += events[b + (bounds.length * i)];
+        }
+
+        const thresholds = [numEvents * 0.75, numEvents * 0.99];
+        const pValue = [-1, -1];
+        let cumulativeSum = 0;
+        for (let b = 0; b < bounds.length; ++b) {
+          const bucketValue = events[b + (bounds.length * i)];
+          cumulativeSum += bucketValue;
+          for (let t = 0; t < thresholds.length; ++t) {
+            const threshold = thresholds[t];
+            if (pValue[t] >= 0) continue;
+
+            if (cumulativeSum >= threshold) {
+              const leftPoint = (b == 0) ? metricData.minValue[i] : metricData.bounds[b - 1];
+              const rightPoint = metricData.bounds[b];
+              const leftSum = cumulativeSum - bucketValue;
+              const rightLeftDiff = cumulativeSum - leftSum;
+              const pos = (rightLeftDiff != 0) ? (threshold - leftSum) / rightLeftDiff : 0;
+              let r = leftPoint + (rightPoint - leftPoint) * pos;
+              if (r < metricData.minValue[i]) r = metricData.minValue[i];
+              if (r > metricData.maxValue[i]) r = metricData.maxValue[i];
+              pValue[t] = r;
+            }
+          }
+        }
+
+        p75.push(Math.round(pValue[0]));
+        p99.push(Math.round(pValue[1]));
+      }
+
+      newChart(metricKey(metric) + '_perc', metric.label, {
+        animation: false,
+        grid: { left: 50, top: 15, right: 10, bottom: 42 },
+        xAxis: {
+          type: 'category',
+          axisLabel: { fontSize: 8 },
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
+          data: buildDateTimeLabels(metricData.lastInterval, metricData.window, numIntervals)
+        },
+        yAxis: {
+          type: 'value',
+          minInterval: 1,
+          splitLine: { show: true, lineStyle: { type: 'dashed' } },
+          axisLabel: { fontSize: 8, formatter: (value) => humanConverter(value) }
+        },
+        tooltip: {
+          trigger: 'axis',
+          confine: true,
+          padding: 4,
+          position: 'inside',
+          axisPointer: { type: 'shadow' },
+          textStyle: { fontSize: 11 },
+          formatter: (data) => {
+            const dataIndex = data[0].dataIndex;
+            let text = metric.label + '<br>';
+            text += '<b>' + new Date(metricData.lastInterval - ((numIntervals - dataIndex) * metricData.window)).toLocaleString() + '</b>';
+            text += '<br><b>' + humanCount(metricData.events[dataIndex]) + '</b> events, sum <b>' + humanConverter(metricData.sum[dataIndex]) + '</b>';
+            text += ' ' + dataIndex;
+            for (let i = 0; i < data.length; ++i) {
+              const v = data[i];
+              text += '<br>' + v.marker + v.seriesName + ': <b>' + humanConverter(v.value) + '</b>';
+            }
+            return text;
+          }
+        },
+        dataZoom: [{ show: true, realtime: true, height: 14, bottom: 10, textStyle: { fontSize: 8 } }],
+        series: [
+          {
+            name: 'max',
+            type: 'line',
+            itemStyle: {},
+            areaStyle: {opacity: 0.8 },
+            lineStyle: { width: 1 },
+            emphasis: { focus: 'series' },
+            showSymbol: false,
+            data: metricData.maxValue
+          },
+          {
+            name: 'p99',
+            type: 'line',
+            itemStyle: {},
+            areaStyle: { opacity: 0.8 },
+            lineStyle: { width: 1 },
+            emphasis: { focus: 'series' },
+            showSymbol: false,
+            data: p99
+          },
+          {
+            name: 'p75',
+            type: 'line',
+            itemStyle: {},
+            areaStyle: { opacity: 0.8 },
+            lineStyle: { width: 1 },
+            emphasis: { focus: 'series' },
+            showSymbol: false,
+            data: p75
+          },
+        ]
       });
     }
 
@@ -500,6 +611,7 @@
         yAxis: {
           type: 'value',
           type: 'log',
+          minInterval: 1,
           splitLine: { show: true, lineStyle: { type: 'dashed' } },
           axisLabel: { fontSize: 8, formatter: (value) => humanCount(value) }
         },
@@ -530,18 +642,29 @@
       if (size >= 1073741824) return (size / 1073741824).toFixed(2) + 'GiB';
       if (size >= 1048576) return (size / 1048576).toFixed(2) + 'MiB';
       if (size >= 1024) return (size / 1024).toFixed(2) + 'KiB';
-      return (size > 0) ? Math.round(size) + 'bytes' : '0';
+      if (size == 1 || size == 0) return size + 'byte';
+      return Math.round(size) + 'bytes';
     }
 
     function humanCount(count) {
       if (count >= 1000000) return (count / 1000000).toFixed(2) + 'M';
       if (count >= 1000) return (count / 1000).toFixed(2) + 'K';
-      return Math.round(count).toString()
+      return count.toFixed(0);
+    }
+
+    function humanNanos(nanos) {
+      if (nanos < 1000) return Math.round(nanos) + 'ns';
+      return humanMicros(nanos / 1000);
+    }
+
+    function humanMicros(usec) {
+      if (usec < 1000) return Math.round(usec) + 'us';
+      return humanMillis(usec / 1000);
     }
 
     function humanMillis(msec) {
       if (msec < 1000) {
-        return Math.round(msec) + "ms";
+        return Math.round(msec) + 'ms';
       }
 
       const hours = Math.floor(msec / (60 * 60 * 1000));
@@ -584,19 +707,20 @@
     const METRIC_UNIT_CONVERTER = {
       'BYTES': humanBytes,
       'COUNT': humanCount,
+      'NANOSECONDS': humanNanos,
+      'MICROSECONDS': humanMicros,
       'MILLISECONDS': humanMillis,
-      'NANOSECONDS': v => humanMillis(v / 1000000),
       'PERCENT': v => v + '%',
     };
 
     const METRIC_RENDERERS = {
-      'TIME_RANGE_COUNTER': renderTimeRangeCounter,
-      'MAX_AVG_TIME_RANGE_GAUGE': renderMaxAvgTimeRangeGauge,
-      'HISTOGRAM': renderHistogram,
-      'HEATMAP': renderHeatmap,
-      'TOPK': renderTopK,
-      'COUNTER': renderCounter,
-      'COUNTER_MAP': renderCounterMap,
+      'TIME_RANGE_COUNTER': [renderTimeRangeCounter],
+      'MAX_AVG_TIME_RANGE_GAUGE': [renderMaxAvgTimeRangeGauge],
+      'HISTOGRAM': [renderHistogram],
+      'HEATMAP': [renderHeatmap, renderHeatmapTimeRangeGauge],
+      'TOPK': [renderTopK],
+      'COUNTER': [renderCounter],
+      'COUNTER_MAP': [renderCounterMap],
     };
 
     function metricKey(metric) {
@@ -617,17 +741,20 @@
       document.getElementById('refreshTime').innerText = new Date().toLocaleString();
       document.getElementById('metricsCount').innerText = metrics.length + ' metrics';
       for (const metric of metrics.sort((a, b) => a.name.localeCompare(b.name))) {
-        const renderer = METRIC_RENDERERS[metric.type];
-        //console.log(metric);
-        if (renderer) {
-          renderer(metric);
-        } else {
+        const renderers = METRIC_RENDERERS[metric.type];
+        if (!renderers) {
           console.log('unsupported metric type', metric.type, metric);
+          continue;
+        }
+
+        for (const r of renderers) {
+          r(metric);
         }
       }
     }
 
-    const JSON_METRICS_URL = 'http://localhost:57025/metrics/json';
+    const JSON_METRICS_URL = './json';
+    //const JSON_METRICS_URL = 'http://localhost:57025/runtime/metrics/json';
     fetchMetrics(JSON_METRICS_URL);
     setInterval(async () => await fetchMetrics(JSON_METRICS_URL), 15_000);
   </script>
