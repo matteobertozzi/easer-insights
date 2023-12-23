@@ -36,13 +36,13 @@
     <easer.insights.version>${project.version}</easer.insights.version>
 
     <!-- jdbc drivers -->
-    <aws.mysql.version>1.1.11</aws.mysql.version>
+    <aws.mysql.version>1.1.12</aws.mysql.version>
     <aws.postgresql.version>0.1.0</aws.postgresql.version>
     <mysql.version>8.2.0</mysql.version>
     <sqlserver.version>12.4.2.jre11</sqlserver.version>
     <postgresql.version>42.7.1</postgresql.version>
     <oracle.version>23.3.0.23.09</oracle.version>
-    <rocksdb.version>8.8.1</rocksdb.version>
+    <rocksdb.version>8.9.1</rocksdb.version>
     <duckdb.version>0.9.2</duckdb.version>
     <sqlite.version>3.44.1.0</sqlite.version>
 
@@ -52,11 +52,11 @@
     <!-- maven/build -->
     <maven.gpg.version>3.1.0</maven.gpg.version>
     <maven.jar.version>3.3.0</maven.jar.version>
-    <maven.compiler.version>3.11.0</maven.compiler.version>
+    <maven.compiler.version>3.12.0</maven.compiler.version>
     <maven.source.version>3.3.0</maven.source.version>
     <maven.javadoc.version>3.6.3</maven.javadoc.version>
-    <maven.surefire.version>3.2.2</maven.surefire.version>
-    <maven.failsafe.version>3.2.2</maven.failsafe.version>
+    <maven.surefire.version>3.2.3</maven.surefire.version>
+    <maven.failsafe.version>3.2.3</maven.failsafe.version>
     <maven.dependency.version>3.6.1</maven.dependency.version>
     <nexus.staging.maven.version>1.6.13</nexus.staging.maven.version>
 
