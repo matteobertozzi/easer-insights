@@ -20,8 +20,8 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js" integrity="sha512-EmNxF3E6bM0Xg1zvmkeYD3HDBeGxtsG92IxFt1myNZhXdCav9MzvuH/zNMBU1DmIPN6njrhX1VTbqdJxQ2wHDg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.0.0/gridstack-all.min.js" integrity="sha512-M5QJERooZoawltlxPF9jhVeh4Uwd7lhoKMd1Xj8agAtMpb1uXPQq3Wf8eJBFSp5GKmywVZnCFv9fl80D8Ln+Xw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.0.0/gridstack.min.css" integrity="sha512-7RGFdf2ChHX9XWfwf8XhFeD8PZEHmN8tAOr0To4wvYH3Umvk1Kfi6CxIb+l5oNikJ9V+ScCQW+KZRC1QSsm4ag==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.0.1/gridstack-all.min.js" integrity="sha512-gq8R31XSsOjp58K9qre4n5inuaUuAkz36qmdVx9Y1VpGtzmx06JlnVGLEDMISZH1Kh/M2X4Iip40WPD94kQW2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.0.1/gridstack.min.css" integrity="sha512-RQiZSqRhRB5xAwqOKws34d14fPNaxoy59RNAUl2KXtT+5XfmspdKoNo1C2hR1bunSSLd4wNOz1bYcZjvuzN0hg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style type="text/css">
     body {
       font-family: 'Roboto', serif;
@@ -73,8 +73,13 @@
   </style>
 </head>
 <body>
-  <div>
-    <span id="refreshTime"></span> - <span id="metricsCount"></span>
+  <div style="display: flex; margin: 2px 8px;">
+    <div style="width: 30%;">
+      <span id="refreshTime"></span> - <span id="metricsCount"></span>
+    </div>
+    <div style="width: 70%;">
+      <input id="search" type="search" style="width: 100%;" />
+    </div>
   </div>
   <div class="grid-wrap">
     <div class="grid-stack"></div>
@@ -107,6 +112,7 @@
 
     echarts.registerTheme('demoTheme', demoTheme);
     const charts = {};
+    const gridElements = {};
     const grid = GridStack.init({
       float: false,
       column: 12,
@@ -119,6 +125,39 @@
       }
     });
 
+    function debounce(timeout, func){
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+      };
+    }
+
+    const search = debounce(300, (event) => {
+      const searchItems = searchBox.value.split('|').map(k => k.trim()).filter(k => k);
+      for (const [key, elem] of Object.entries(gridElements)) {
+        let matches = searchItems.length == 0;
+        for (const searchItem of searchItems) {
+          if (searchItem && key.includes(searchItem)) {
+            matches = true;
+            break;
+          }
+        }
+
+        const node = elem.parentNode.parentNode;
+        if (matches) {
+          grid.addWidget(node);
+        } else {
+          grid.removeWidget(node);
+        }
+      }
+      grid.compact();
+    });
+
+    const searchBox = document.getElementById('search');
+    searchBox.addEventListener('search', (event) => search(event));
+    searchBox.addEventListener('keyup', (event) => search(event));
+
     function newChart(name, label, options) {
       let chart = charts[name];
       if (chart) {
@@ -126,8 +165,10 @@
         return;
       }
 
-      grid.addWidget({w: 4, h: 5, content: `<div class="item"><div class="item-label">${label}</div><div id='${name}' class="item-body"></div></div>`});
-      const nodeChart = document.getElementById(name);
+      grid.addWidget({w: 4, h: 5, content: `<div id="${name}" class="metric item"><div class="item-label">${label}</div><div id="chart-${name}" class="item-body"></div></div>`});
+      gridElements[name] = document.getElementById(name);
+
+      const nodeChart = document.getElementById('chart-' + name);
 
       chart = echarts.init(nodeChart, 'demoTheme');
       chart.setOption(options);
@@ -510,15 +551,16 @@
       }
 
       const name = metricKey(metric);
-      let node = document.getElementById(name);
+      let node = gridElements[name];
       if (node) {
         while (node.hasChildNodes()) {
           node.removeChild(node.firstChild);
         }
       } else {
         const label = metric.label;
-        grid.addWidget({w: 8, h: 5, content: `<div id='${name}' class="item"></div>`});
+        grid.addWidget({w: 8, h: 5, content: `<div id="${name}" class="metric item"></div>`});
         node = document.getElementById(name);
+        gridElements[name] = node;
       }
 
       const nodeTable = document.createElement("table");
