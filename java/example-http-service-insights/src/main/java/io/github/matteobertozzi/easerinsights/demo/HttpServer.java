@@ -21,14 +21,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
 import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.easerinsights.tracing.RootSpan;
+import io.github.matteobertozzi.easerinsights.tracing.Span;
 import io.github.matteobertozzi.easerinsights.tracing.Span.SpanState;
 import io.github.matteobertozzi.easerinsights.tracing.Tracer;
+import io.github.matteobertozzi.rednaco.data.JsonFormat;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -57,8 +56,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsConfigBuilder;
 import io.netty.handler.codec.http.cors.CorsHandler;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AsciiString;
 
 public final class HttpServer {
@@ -79,11 +76,10 @@ public final class HttpServer {
     void handle(FullHttpRequest req, QueryStringDecoder query, FullHttpResponse resp, long elapsedMs);
   }
 
-  private static final ObjectMapper mapper = new ObjectMapper();
   public static void sendResponse(final ChannelHandlerContext ctx,
       final FullHttpRequest req, final QueryStringDecoder query,
-      final Object content) throws JsonProcessingException {
-    final String json = mapper.writeValueAsString(content);
+      final Object content) {
+    final String json = JsonFormat.INSTANCE.asString(content);
     sendResponse(ctx, req, query, HttpResponseStatus.OK, HttpHeaderValues.APPLICATION_JSON, json.getBytes(StandardCharsets.UTF_8));
   }
 
@@ -124,13 +120,17 @@ public final class HttpServer {
 
           HttpHandler handler = handlers.get(queryDecoder.path());
           if (handler != null) {
-            handler.handle(ctx, req, queryDecoder);
+            try (Span x = Tracer.newThreadLocalSpan()) {
+              handler.handle(ctx, req, queryDecoder);
+            }
             return;
           }
 
           handler = handlers.get("*");
           if (handler != null) {
-            handler.handle(ctx, req, queryDecoder);
+            try (Span x = Tracer.newThreadLocalSpan()) {
+              handler.handle(ctx, req, queryDecoder);
+            }
             return;
           }
 
@@ -181,7 +181,6 @@ public final class HttpServer {
       b.option(ChannelOption.SO_BACKLOG, 1024);
       b.group(bossGroup, workerGroup)
           .channel(NioServerSocketChannel.class)
-          .handler(new LoggingHandler(LogLevel.INFO))
           .childHandler(new DemoHttpServerInitializer());
 
       final Channel ch = b.bind(port).sync().channel();
