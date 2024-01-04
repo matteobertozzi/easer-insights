@@ -34,13 +34,13 @@
 
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
-    <aws-java-sdk.version>2.22.5</aws-java-sdk.version>
+    <aws-java-sdk.version>2.22.9</aws-java-sdk.version>
 
     <junit.version>5.10.1</junit.version>
 
     <maven.gpg.version>3.1.0</maven.gpg.version>
     <maven.jar.version>3.3.0</maven.jar.version>
-    <maven.compiler.version>3.12.0</maven.compiler.version>
+    <maven.compiler.version>3.12.1</maven.compiler.version>
     <maven.source.version>3.3.0</maven.source.version>
     <maven.javadoc.version>3.6.3</maven.javadoc.version>
     <maven.surefire.version>3.2.3</maven.surefire.version>
@@ -117,6 +117,7 @@
         <configuration>
           <release>21</release>
           <compilerArgs>
+            <arg>-proc:none</arg>
             <arg>-Xlint:all</arg>
           </compilerArgs>
           <showWarnings>true</showWarnings>
