@@ -39,28 +39,46 @@ public final class LogUtil {
   // ===============================================================================================
   //  Stack Trace to String related
   // ===============================================================================================
+  private static boolean shouldKeep(final StackFrame frame) {
+    return !Logger.EXCLUDE_CLASSES.contains(frame.getClassName());
+  }
+
   public static String lookupLineClassAndMethod(final int skipFrames) {
     // Get the stack trace: this is expensive... but really useful
     // NOTE: i should be set to the first public method
     // skipFrames = 2 -> [0: lookupLogLineClassAndMethod(), 1: myLogger(), 2:userFunc()]
     final StackFrame frame = StackWalker.getInstance().walk(s ->
       s.skip(skipFrames)
-      .filter(x -> !Logger.EXCLUDE_CLASSES.contains(x.getClassName()))
+      .filter(LogUtil::shouldKeep)
       .findFirst()
     ).orElseThrow();
 
     // com.foo.Bar.m1():11
-    return getClassName(frame.getClassName()) + "." + frame.getMethodName() + "():" + frame.getLineNumber();
+    return getClassName(frame.getClassName()) + '.' + frame.getMethodName() + "():" + frame.getLineNumber();
+  }
+
+  public static String lookupClassAndMethod(final int skipFrames) {
+    // Get the stack trace: this is expensive... but really useful
+    // NOTE: i should be set to the first public method
+    // skipFrames = 2 -> [0: lookupLogLineClassAndMethod(), 1: myLogger(), 2:userFunc()]
+    final StackFrame frame = StackWalker.getInstance().walk(s ->
+      s.skip(skipFrames)
+      .filter(LogUtil::shouldKeep)
+      .findFirst()
+    ).orElseThrow();
+
+    // com.foo.Bar.m1()
+    return getClassName(frame.getClassName()) + '.' + frame.getMethodName() + "()";
   }
 
   private static String getClassName(final String cname) {
-    int index = cname.length();
-    for (int i = 0; i < 2; i++) {
-      final int tmp = cname.lastIndexOf('.', index - 1);
-      if (tmp <= 0) break;
-      index = tmp;
-    }
-    return cname.substring(index + 1);
+    final int index = cname.length();
+
+    final int aIndex = cname.lastIndexOf('.', index - 1);
+    if (aIndex < 0) return cname.substring(index + 1);
+
+    final int bIndex = cname.lastIndexOf('.', aIndex - 1);
+    return cname.substring(((bIndex < 0) ? aIndex : bIndex) + 1);
   }
 
   public static String stackTraceToString(final Throwable exception) {

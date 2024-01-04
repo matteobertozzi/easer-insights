@@ -17,14 +17,15 @@
 
 package io.github.matteobertozzi.easerinsights.logging;
 
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import io.github.matteobertozzi.easerinsights.logging.LogProvider.LogEntry;
 import io.github.matteobertozzi.easerinsights.tracing.Tracer;
 
 public final class Logger {
-  public static final CopyOnWriteArraySet<String> EXCLUDE_CLASSES = new CopyOnWriteArraySet<>();
+  public static final Set<String> EXCLUDE_CLASSES = ConcurrentHashMap.newKeySet();
 
   // ===============================================================================================
   //  Log Provider related

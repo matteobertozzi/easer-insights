@@ -93,8 +93,9 @@ public final class Tracer {
   private static final ThreadLocal<ArrayList<Span>> localSpanStack = ThreadLocal.withInitial(ArrayList::new);
 
   private static void addToLocalSpanStack(final ArrayList<Span> spanStack, final Span span) {
-    TraceAttributes.CODE_METHOD_CALLER.set(span, LogUtil.lookupLineClassAndMethod(3));
+    TraceAttributes.CODE_METHOD_CALLER.set(span, LogUtil.lookupClassAndMethod(3));
     spanStack.add(span);
+    notifyNewSpanListeners(span);
   }
 
   public static Span newThreadLocalSpan() {
@@ -103,7 +104,7 @@ public final class Tracer {
       throw new IllegalArgumentException("expected a thread-local Span");
     }
 
-    final Span parent = spanStack.get(spanStack.size() - 1);
+    final Span parent = spanStack.getLast();
     final Span span = traceProvider.openSpan(parent.rootSpan(), parent.spanId(), spanIdProvider.newSpanId());
     addToLocalSpanStack(spanStack, span);
     return span;
@@ -114,7 +115,7 @@ public final class Tracer {
     if (spanStack.isEmpty()) {
       return Tracer.nullSpan;
     }
-    return spanStack.get(spanStack.size() - 1);
+    return spanStack.getLast();
   }
 
   public static void closeSpan(final Span span) {
@@ -124,12 +125,12 @@ public final class Tracer {
       return;
     }
 
-    if (span != spanStack.get(spanStack.size() - 1)) {
+    if (span != spanStack.getLast()) {
       Logger.alert(new IllegalStateException(), "invalid thread-local span stack state. closing {} stack: {}", span, spanStack);
       return;
     }
 
-    spanStack.remove(spanStack.size() - 1);
+    spanStack.removeLast();
     Tracer.traceProvider.closeSpan(span);
 
     if (span instanceof final RootSpan rootSpan) {
@@ -141,13 +142,26 @@ public final class Tracer {
   //  Listeners
   // ========================================================================================================================
   private static final CopyOnWriteArrayList<Consumer<RootSpan>> rootSpanListeners = new CopyOnWriteArrayList<>();
+  private static final CopyOnWriteArrayList<Consumer<Span>> newSpanListeners = new CopyOnWriteArrayList<>();
 
   public static void subscribeToRootSpanEvents(final Consumer<RootSpan> listener) {
     rootSpanListeners.add(listener);
   }
 
+  public static void subscribeToNewSpanEvents(final Consumer<Span> listener) {
+    newSpanListeners.add(listener);
+  }
+
   private static void notifyRootSpanListeners(final RootSpan span) {
+    if (rootSpanListeners.isEmpty()) return;
     for (final Consumer<RootSpan> consumer: rootSpanListeners) {
+      consumer.accept(span);
+    }
+  }
+
+  private static void notifyNewSpanListeners(final Span span) {
+    if (newSpanListeners.isEmpty()) return;
+    for (final Consumer<Span> consumer: newSpanListeners) {
       consumer.accept(span);
     }
   }
