@@ -49,6 +49,7 @@ import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRange
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
 import io.github.matteobertozzi.easerinsights.tracing.TaskMonitor;
+import io.github.matteobertozzi.easerinsights.tracing.TraceRecorder;
 import io.github.matteobertozzi.easerinsights.tracing.Tracer;
 import io.github.matteobertozzi.easerinsights.tracing.providers.Base58RandSpanId;
 import io.github.matteobertozzi.easerinsights.tracing.providers.Hex128RandTraceId;
@@ -114,7 +115,7 @@ public final class DemoMain {
       while (isRunning()) {
         processDatumBufferAsBatch(datumBufferReader, datumBatch,
           entry -> entry, AWS_MAX_DATUM_BATCH_SIZE,
-          entries -> System.out.println("process " + entries.size()));
+          entries -> System.out.println("exporter process " + entries.size()));
       }
     }
   }
@@ -177,7 +178,7 @@ public final class DemoMain {
         final String report = MetricsRegistry.INSTANCE.humanReport();
         HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.OK, HttpHeaderValues.TEXT_PLAIN, report.getBytes(StandardCharsets.UTF_8));
       },
-      "/metrics/json", (ctx, req, query) -> {
+      "/metrics/data", (ctx, req, query) -> {
         HttpServer.sendResponse(ctx, req, query, MetricsRegistry.INSTANCE.snapshot());
       },
       "/metrics/dashboard", (ctx, req, query) -> {
@@ -187,6 +188,9 @@ public final class DemoMain {
       "/monitor", (ctx, req, query) -> {
         final String report = buildMonitorPage();
         HttpServer.sendResponse(ctx, req, query, HttpResponseStatus.OK, HttpHeaderValues.TEXT_HTML, report.getBytes(StandardCharsets.UTF_8));
+      },
+      "/traces", (ctx, req, query) -> {
+        HttpServer.sendResponse(ctx, req, query, TraceRecorder.INSTANCE.snapshot());
       },
       "/slow", (ctx, req, query) -> {
         final long minMillis = Long.parseLong(query.parameters().getOrDefault("minMillis", List.of("100")).get(0));

@@ -34,7 +34,7 @@ public class BasicSpan implements Span {
   private final Map<String, Object> attributes = new HashMap<>(0);
   private final ArrayList<SpanEvent> events = new ArrayList<>(0);
 
-  private final RootSpan rootSpan;
+  private transient final RootSpan rootSpan;
   private final SpanId parentId;
   private final SpanId spanId;
   private final long startUnixNanos;
