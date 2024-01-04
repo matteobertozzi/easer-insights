@@ -36,6 +36,11 @@ public final class TraceAttributes {
 
   public static final TraceLongAttribute TASK_QUEUE_TIME_NS = new TraceLongAttribute("task.queue.time.ns");
 
+  public static final TraceStringAttribute HTTP_REQUEST_METHOD = new TraceStringAttribute("http.request.method");
+  public static final TraceStringAttribute HTTP_RESPONSE_METHOD = new TraceStringAttribute("http.response.status_code");
+  public static final TraceStringAttribute HTTP_ROUTE = new TraceStringAttribute("http.route");
+  public static final TraceStringAttribute URL_PATH = new TraceStringAttribute("url.path");
+
   public record TraceStringAttribute(String name) {
     public String get(final Span span, final String defaultValue) {
       return get(span.attributes(), defaultValue);
