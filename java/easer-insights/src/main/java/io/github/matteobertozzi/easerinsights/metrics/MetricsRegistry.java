@@ -28,6 +28,7 @@ import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.jvm.JvmMetrics;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector.MetricSnapshot;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDatumCollector.MetricDatumUpdateType;
+import io.github.matteobertozzi.rednaco.collections.arrays.ArrayUtil.ArrayConsumer;
 import io.github.matteobertozzi.rednaco.collections.arrays.paged.PagedArray;
 
 public final class MetricsRegistry {
@@ -39,6 +40,10 @@ public final class MetricsRegistry {
 
   private MetricsRegistry() {
     // no-op
+  }
+
+  public int size() {
+    return collectorsNames.size();
   }
 
   public MetricCollector get(final String name) {
@@ -57,6 +62,15 @@ public final class MetricsRegistry {
     lock.lock();
     try {
       return collectorsPages.get(metricId - 1);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  void forEach(final ArrayConsumer<MetricCollector> consumer) {
+    lock.lock();
+    try {
+      collectorsPages.forEach(consumer);
     } finally {
       lock.unlock();
     }
@@ -139,7 +153,7 @@ public final class MetricsRegistry {
   }
 
   private MetricCollector addCollector(final MetricDefinition definition, final MetricDatumCollector datumCollector) {
-    final int metricId = collectorsPages.size();
+    final int metricId = collectorsPages.size() + 1;
     final MetricCollector collector = datumCollector.newCollector(definition, metricId);
     collectorsPages.add(collector);
     collectorsNames.put(definition, collector);

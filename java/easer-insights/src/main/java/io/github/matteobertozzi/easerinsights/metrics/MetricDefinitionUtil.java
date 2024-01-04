@@ -98,6 +98,11 @@ public final class MetricDefinitionUtil {
       }
       return false;
     }
+
+    @Override
+    public String toString() {
+      return "SimpleMetricDefinition [name=" + name + ", unit=" + unit + ", label=" + label + ", help=" + help + "]";
+    }
   }
 
   private static class DimensionsMetricDefinition extends SimpleMetricDefinition {
@@ -117,5 +122,10 @@ public final class MetricDefinitionUtil {
     @Override public String[] dimensionKeys() { return dimensionKeys;}
     @Override public String[] dimensionValues() { return dimensionValues; }
     @Override public Map<String, String> dimensions() { return dimensions; }
+
+    @Override
+    public String toString() {
+      return "DimensionsMetricDefinition [name=" + name() + ", dimensions=" + dimensions + ", unit=" + unit() + ", label=" + label() + ", help=" + help() + "]";
+    }
   }
 }
