@@ -64,6 +64,14 @@
       <version>${rocksdb.version}</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/me.lemire.integercompression/JavaFastPFOR -->
+    <dependency>
+      <groupId>me.lemire.integercompression</groupId>
+      <artifactId>JavaFastPFOR</artifactId>
+      <version>0.1.12</version>
+    </dependency>
+
+
     <!-- Unit Tests Related -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
