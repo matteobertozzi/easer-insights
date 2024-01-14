@@ -31,11 +31,11 @@ public final class MetricDefinitionUtil {
     // no-op
   }
 
-  public static MetricDefinition newMetricDefinition(final String name, final DatumUnit unit, final String label, final String help) {
+  public static MetricDefinition of(final String name, final DatumUnit unit, final String label, final String help) {
     return new SimpleMetricDefinition(name, unit, label, help);
   }
 
-  public static MetricDefinition newMetricDefinition(final String name, final String[] dimensionKeys, final String[] dimensionVals,
+  public static MetricDefinition of(final String name, final String[] dimensionKeys, final String[] dimensionVals,
       final DatumUnit unit, final String label, final String help) {
     return new DimensionsMetricDefinition(name,
       dimensionKeys, dimensionVals, ImmutableCollections.mapOf(dimensionKeys, dimensionVals),

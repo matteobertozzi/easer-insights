@@ -48,10 +48,10 @@ public class TestMetricKeyUtil {
     final MetricKey bk = MetricKeyUtil.newMetricKey("test_bar");
     final MetricKey ck = MetricKeyUtil.newMetricKey("test_foo", new String[] { "x", "y" }, new String[] { "X1", "Y1" });
     final MetricKey dk = MetricKeyUtil.newMetricKey("test_bar", new String[] { "x", "y" }, new String[] { "X1", "Y1" });
-    final MetricDefinition ad = MetricDefinitionUtil.newMetricDefinition("test_foo", DatumUnit.COUNT, "test foo", null);
-    final MetricDefinition bd = MetricDefinitionUtil.newMetricDefinition("test_bar", DatumUnit.SECONDS, "test bar", null);
-    final MetricDefinition cd = MetricDefinitionUtil.newMetricDefinition("test_foo", new String[] { "x", "y" }, new String[] { "X1", "Y1" }, DatumUnit.SECONDS, "test foo", null);
-    final MetricDefinition dd = MetricDefinitionUtil.newMetricDefinition("test_bar", new String[] { "x", "y" }, new String[] { "X1", "Y1" }, DatumUnit.SECONDS, "test bar", null);
+    final MetricDefinition ad = MetricDefinitionUtil.of("test_foo", DatumUnit.COUNT, "test foo", null);
+    final MetricDefinition bd = MetricDefinitionUtil.of("test_bar", DatumUnit.SECONDS, "test bar", null);
+    final MetricDefinition cd = MetricDefinitionUtil.of("test_foo", new String[] { "x", "y" }, new String[] { "X1", "Y1" }, DatumUnit.SECONDS, "test foo", null);
+    final MetricDefinition dd = MetricDefinitionUtil.of("test_bar", new String[] { "x", "y" }, new String[] { "X1", "Y1" }, DatumUnit.SECONDS, "test bar", null);
 
     Assertions.assertEquals(ak, ad);
     Assertions.assertEquals(bk, bd);

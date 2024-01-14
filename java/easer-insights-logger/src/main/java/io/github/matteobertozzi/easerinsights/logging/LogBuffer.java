@@ -17,15 +17,21 @@
 
 package io.github.matteobertozzi.easerinsights.logging;
 
-import io.github.matteobertozzi.easerinsights.logging.Logger.LogLevel;
-import io.github.matteobertozzi.easerinsights.tracing.Span;
+public interface LogBuffer extends Appendable {
+  void commitEntry();
 
-public interface LogProvider {
-  void logMessage(Span span, LogLevel level, String format, Object[] args);
-  void logMessage(Span span, LogLevel level, Throwable exception, String format, Object[] args);
-  void logEntry(LogEntry entry);
+  LogBuffer append(char ch);
+  LogBuffer append(Object value);
+  LogBuffer append(CharSequence csq);
+  LogBuffer append(CharSequence csq, int start, int end);
 
-  interface LogEntry {
-    void writeTextTo(LogBuffer buffer);
-  }
+  LogBuffer appendAscii(char ch);
+  LogBuffer appendAscii(Object value);
+  LogBuffer appendAscii(CharSequence csq);
+  LogBuffer appendAscii(CharSequence csq, int start, int end);
+
+  LogBuffer appendNamedFormat(String format, Object[] args);
+
+  LogBuffer appendStackTrace(Throwable exception);
+  LogBuffer appendStackTrace(StackTraceElement[] stackTrace, int fromLevel);
 }

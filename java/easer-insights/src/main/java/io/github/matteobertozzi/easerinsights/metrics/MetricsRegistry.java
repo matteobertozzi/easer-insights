@@ -105,14 +105,14 @@ public final class MetricsRegistry {
   // ================================================================================================
   <T extends MetricDatumCollector> T register(final String name, final DatumUnit unit,
       final String label, final String help, final T datumCollector) {
-    final MetricDefinition definition = MetricDefinitionUtil.newMetricDefinition(name, unit, label, help);
+    final MetricDefinition definition = MetricDefinitionUtil.of(name, unit, label, help);
     return register(definition, datumCollector);
   }
 
   <T extends MetricDatumCollector> T register(final String name, final String[] dimensionKeys, final String[] dimensionValues,
       final DatumUnit unit, final String label, final String help,
       final T datumCollector) {
-    final MetricDefinition definition = MetricDefinitionUtil.newMetricDefinition(name, dimensionKeys, dimensionValues, unit, label, help);
+    final MetricDefinition definition = MetricDefinitionUtil.of(name, dimensionKeys, dimensionValues, unit, label, help);
     return register(definition, datumCollector);
   }
 
@@ -120,7 +120,7 @@ public final class MetricsRegistry {
   <T extends MetricDatumCollector> T register(final String name, final String[] dimensionKeys, final String[] dimensionValues,
       final DatumUnit unit, final String label, final String help,
       final Supplier<T> collectorSupplier) {
-    final MetricDefinition definition = MetricDefinitionUtil.newMetricDefinition(name, dimensionKeys, dimensionValues, unit, label, help);
+    final MetricDefinition definition = MetricDefinitionUtil.of(name, dimensionKeys, dimensionValues, unit, label, help);
 
     lock.lock();
     try {

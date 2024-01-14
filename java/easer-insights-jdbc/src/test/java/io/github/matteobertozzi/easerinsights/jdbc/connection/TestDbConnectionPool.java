@@ -22,7 +22,6 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -37,7 +36,7 @@ import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
 
 public class TestDbConnectionPool {
   static {
-    Logger.setLogProvider(new TextLogProvider());
+    Logger.setLogProvider(TextLogProvider.newStreamProvider(System.out));
   }
   @Test
   public void testConnectionPool() throws Exception {

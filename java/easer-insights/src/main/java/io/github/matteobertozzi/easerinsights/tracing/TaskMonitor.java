@@ -126,7 +126,7 @@ public final class TaskMonitor {
   }
 
   public StringBuilder addSlowTasksToHumanReport(final StringBuilder report) {
-    final MetricDefinition def = MetricDefinitionUtil.newMetricDefinition("slow.task", DatumUnit.NANOSECONDS, null, null);
+    final MetricDefinition def = MetricDefinitionUtil.of("slow.task", DatumUnit.NANOSECONDS, null, null);
     return topSlowTasks.dataSnapshot().addToHumanReport(def, report);
   }
 }

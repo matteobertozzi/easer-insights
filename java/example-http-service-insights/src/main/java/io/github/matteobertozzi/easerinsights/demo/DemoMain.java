@@ -162,7 +162,7 @@ public final class DemoMain {
   }
 
   public static void main(final String[] args) throws Exception {
-    Logger.setLogProvider(new TextLogProvider());
+    Logger.setLogProvider(TextLogProvider.newStreamProvider(System.out));
     Tracer.setTraceProvider(BasicTracer.INSTANCE);
     Tracer.setIdProviders(Hex128RandTraceId.PROVIDER, Base58RandSpanId.PROVIDER);
 
