@@ -22,6 +22,7 @@ easer-insights-profiler
 easer-insights-jdbc
 easer-insights-aws-cloudwatch
 easer-insights-influx
+easer-insights-graphite
 example-http-service-insights"
 
 op_type="BUILD"

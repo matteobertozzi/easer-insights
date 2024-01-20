@@ -71,6 +71,7 @@ public final class MetricKeyUtil {
     @Override public String[] dimensionKeys() { return dimensionKeys; }
     @Override public String[] dimensionValues() { return dimensionVals; }
     @Override public boolean hasDimensions() { return dimensionKeys != null && dimensionKeys.length > 0; }
+    @Override public int dimensionCount() { return dimensionKeys != null ? dimensionKeys.length : 0; }
 
     @Override
     public Map<String, String> dimensions() {

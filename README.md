@@ -21,6 +21,7 @@ n**E**bulous sm**A**ll **S**cale s**E**rvices p**R**ophecies & Insights. A Libra
 ### Export
  * AWS CloudWatch Exporter
  * Influx Line Protocol Exporter (Also works with Grafana Cloud)
+ * Graphite Json Exporter (Also works with Grafana Cloud)
 
 ### Code
 Metrics are registered to a **Collector Registry**,

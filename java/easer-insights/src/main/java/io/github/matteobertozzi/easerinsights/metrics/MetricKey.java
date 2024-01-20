@@ -22,6 +22,7 @@ import java.util.Map;
 public interface MetricKey {
   String name();
 
+  int dimensionCount();
   boolean hasDimensions();
   String[] dimensionKeys();
   String[] dimensionValues();

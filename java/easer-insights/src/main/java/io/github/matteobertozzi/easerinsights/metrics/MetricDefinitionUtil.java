@@ -73,6 +73,7 @@ public final class MetricDefinitionUtil {
     @Override public String label() { return label;}
     @Override public String help() { return help;}
 
+    @Override public int dimensionCount() { return 0; }
     @Override public boolean hasDimensions() { return false; }
     @Override public String[] dimensionKeys() { return EMPTY_STRING_ARRAY;}
     @Override public String[] dimensionValues() { return EMPTY_STRING_ARRAY; }
@@ -118,6 +119,7 @@ public final class MetricDefinitionUtil {
       this.dimensions = ImmutableCollections.mapOf(dimensionKeys, dimensionValues);
     }
 
+    @Override public int dimensionCount() { return dimensionKeys.length; }
     @Override public boolean hasDimensions() { return true; }
     @Override public String[] dimensionKeys() { return dimensionKeys;}
     @Override public String[] dimensionValues() { return dimensionValues; }
