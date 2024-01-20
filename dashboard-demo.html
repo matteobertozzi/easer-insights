@@ -499,7 +499,6 @@
             let text = metric.label + '<br>';
             text += '<b>' + new Date(metricData.lastInterval - ((numIntervals - dataIndex) * metricData.window)).toLocaleString() + '</b>';
             text += '<br><b>' + humanCount(metricData.events[dataIndex]) + '</b> events, sum <b>' + humanConverter(metricData.sum[dataIndex]) + '</b>';
-            text += ' ' + dataIndex;
             for (let i = 0; i < data.length; ++i) {
               const v = data[i];
               text += '<br>' + v.marker + v.seriesName + ': <b>' + humanConverter(v.value) + '</b>';
@@ -637,44 +636,32 @@
         return;
       }
 
-      const keys = metricData.keys.slice(0, 32);
-      const vals = metricData.values.slice(0, 32);
-
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       newChart(metricKey(metric), metric.label, {
         animation: false,
-        grid: { left: 50, top: 20, right: 15, bottom: 10 },
-        xAxis: {
-          type: 'category',
-          axisLabel: { show: false, fontSize: 8 },
-          splitLine: { show: true, lineStyle: { type: 'dashed' } },
-          data: keys,
-        },
-        yAxis: {
-          type: 'value',
-          type: 'log',
-          minInterval: 1,
-          splitLine: { show: true, lineStyle: { type: 'dashed' } },
-          axisLabel: { fontSize: 8, formatter: (value) => humanCount(value) }
-        },
+        grid: { left: 50, top: 4, right: 15, bottom: 30 },
         tooltip: {
-          trigger: 'axis',
           confine: true,
           padding: 4,
           position: 'inside',
           textStyle: { fontSize: 11 },
-          axisPointer: { type: 'shadow' },
           formatter: (data) => {
-            const v = data[0];
+            const v = data.data;
+            console.log('tooltip', data, v);
             let text = metric.label + '<br>';
-            text += v.name + ': <b>' + humanConverter(v.data) + '</b>';
+            text += '<b>' + humanConverter(v.value) + '</b>: ' + v.name;
             return text;
           }
         },
+        textStyle: { fontSize: 8 },
         series: [{
           name: metric.name,
-          type: 'bar',
-          data: vals,
+          type: 'treemap',
+          data: metricData.keys.map((v, index) => ({ name: v, value: metricData.values[index] })),
+          breadcrumb: {
+            height: 12,
+            itemStyle: { textStyle: { fontSize: 8 } }
+          }
         }]
       });
     }
@@ -795,10 +782,10 @@
       }
     }
 
-    const JSON_METRICS_URL = './json';
-    //const JSON_METRICS_URL = 'http://localhost:57025/runtime/metrics/json';
+    const JSON_METRICS_URL = './data';
+    //const JSON_METRICS_URL = 'http://localhost:57025/runtime/metrics/data';
     fetchMetrics(JSON_METRICS_URL);
-    setInterval(async () => await fetchMetrics(JSON_METRICS_URL), 15_000);
+    setInterval(async () => await fetchMetrics(JSON_METRICS_URL), 5_000);
   </script>
 </body>
 </html>
