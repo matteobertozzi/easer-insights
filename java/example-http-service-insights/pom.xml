@@ -34,7 +34,7 @@
 
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
-    <netty.version>4.1.104.Final</netty.version>
+    <netty.version>4.1.106.Final</netty.version>
     <rednaco.version>3.0.0-SNAPSHOT</rednaco.version>
 
     <maven.gpg.version>3.1.0</maven.gpg.version>

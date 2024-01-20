@@ -36,15 +36,15 @@
     <easer.insights.version>${project.version}</easer.insights.version>
 
     <!-- jdbc drivers -->
-    <aws.mysql.version>1.1.12</aws.mysql.version>
+    <aws.mysql.version>1.1.13</aws.mysql.version>
     <aws.postgresql.version>0.1.0</aws.postgresql.version>
-    <mysql.version>8.2.0</mysql.version>
+    <mysql.version>8.3.0</mysql.version>
     <sqlserver.version>12.4.2.jre11</sqlserver.version>
     <postgresql.version>42.7.1</postgresql.version>
     <oracle.version>23.3.0.23.09</oracle.version>
     <rocksdb.version>8.9.1</rocksdb.version>
     <duckdb.version>0.9.2</duckdb.version>
-    <sqlite.version>3.44.1.0</sqlite.version>
+    <sqlite.version>3.45.0.0</sqlite.version>
 
     <!-- tests -->
     <junit.version>5.10.1</junit.version>
