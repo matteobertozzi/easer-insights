@@ -18,6 +18,10 @@ n**E**bulous sm**A**ll **S**cale s**E**rvices p**R**ophecies & Insights. A Libra
   - **Top K**: Keep track of the slowst/highest events. Useful to find quickly the slowest/larger requests and have a min/max/avg of them.
   - **Counter Map**: Simple counter grouped by a key. This will be rendered with a pie chart. Usage examples may include the count of request types or the count of requests by machine.
 
+### Export
+ * AWS CloudWatch Exporter
+ * Influx Line Protocol Exporter (Also works with Grafana Cloud)
+
 ### Code
 Metrics are registered to a **Collector Registry**,
 the code should be trivial and easy to read.
@@ -26,15 +30,21 @@ the code should be trivial and easy to read.
 // Declare the Metrics to collect
 TimeRangeCounter reqCount = new MetricCollector.Builder()
   .unit(DatumUnit.COUNT)
-  .name("http_req_count")
+  .name("http.req.count")
   .label("HTTP Request Count")
   .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
 CounterMap reqMap = Metrics.newCollector()
   .unit(DatumUnit.COUNT)
-  .name("http_req_map")
+  .name("http.req.map")
   .label("HTTP Request Map")
   .register(CounterMap.newMultiThreaded());
+
+Heatmap execTimeHeatmap = Metrics.newCollector()
+    .unit(DatumUnit.MILLISECONDS)
+    .name("http.exec.time.heatmap")
+    .label("HTTP Exec Time")
+    .register(Heatmap.newMultiThreaded(60, 1, TimeUnit.MINUTES, Histogram.DEFAULT_DURATION_BOUNDS_MS));
 
 MaxAvgTimeRangeGauge execTime = Metrics.newCollector()
   .unit(DatumUnit.MILLISECONDS)
@@ -58,6 +68,7 @@ MetricDimension<Histogram> uriExecTime = Metrics.newCollectorWithDimensions()
 // Collect the new measurements
 reqCount.inc();
 reqMap.inc("/foo");
+execTimeHeatmap.sample(123);
 execTime.sample(123);
 topExecTime.sample("/foo", 123);
 uriExecTime.get("/foo").sample(123);
@@ -74,6 +85,10 @@ and a **label** and the **help** to let the user know what is looking at. The da
   "unit": "data unit enum",
   "label": "metric label",
   "help": "metric help",
+  "dimensions": {
+    "key": "value",
+    ...
+  }
   "data": ...metric-data...
 }
 ```
@@ -91,6 +106,17 @@ Each metric type may be its own data format to provide a more compact version of
   "max": [...max data...],
   "sum": [...sum data...]
   "count": [...avg data...],
+}
+
+"heatmap_data": {
+  "window": window msec,
+  "last_interval": timestamp msec,
+  "bounds': [...bounds...],
+  "events": [...events...],
+  "min_value": [...min value...],
+  "max_value": [...max value...],
+  "sum": [...events sum...],
+  "sum_squares": [...events sum square...],
 }
 
 "histogram_data": {
@@ -125,6 +151,8 @@ Each metric type may be its own data format to provide a more compact version of
 
 ### Example of Plain Text metrics dump
 For each metric type we can also provide a text version.
+This library is made for services that may not have an external monitoring system, and being able to have a simple /metrics endpoint is critical to monitor the system.
+
 ```
 --- Request Count (last 60min) (server_request_count) ---
 Request Count divided by minute
