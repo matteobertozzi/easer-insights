@@ -35,19 +35,19 @@ public final class JvmCpuMetrics {
 
   private final MaxAvgTimeRangeGauge cpuUsage = Metrics.newCollector()
     .unit(DatumUnit.PERCENT)
-    .name("jvm.cpu.cpu_usage")
+    .name("jvm.cpu.usage")
     .label("JVM CPU Usage")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
   private final TimeRangeCounter cpuTime = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
-    .name("jvm.cpu.cpu_time")
+    .name("jvm.cpu.time")
     .label("JVM CPU Time")
     .register(TimeRangeCounter.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
   private final MaxAvgTimeRangeGauge threadCount = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
-    .name("jvm.cpu.thread_count")
+    .name("jvm.cpu.thread.count")
     .label("JVM Thread Count")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 

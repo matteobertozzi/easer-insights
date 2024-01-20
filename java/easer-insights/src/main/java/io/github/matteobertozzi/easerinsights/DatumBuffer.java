@@ -49,13 +49,13 @@ public final class DatumBuffer {
   public static final class DatumBufferWriter {
     private static final MaxAvgTimeRangeGauge flushPageSize = Metrics.newCollector()
       .unit(DatumUnit.BYTES)
-      .name("easer_insights_datum_buffer_flush_size")
+      .name("easer.insights.datum.buffer.flush.size")
       .label("Easer Insights Datum Buffer Flush Size")
       .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
     private static final MaxAvgTimeRangeGauge flushPageEntries = Metrics.newCollector()
       .unit(DatumUnit.COUNT)
-      .name("easer_insights_datum_buffer_flush_entries")
+      .name("easer.insights.datum.buffer.flush.entries")
       .label("Easer Insights Datum Buffer Flush Entries")
       .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 

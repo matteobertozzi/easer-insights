@@ -65,37 +65,37 @@ public final class DemoMain {
   private static final MetricDimension<Histogram> uriExecTime = Metrics.newCollectorWithDimensions()
     .dimensions("uri")
     .unit(DatumUnit.MILLISECONDS)
-    .name("http_endpoint_exec_time")
+    .name("demo.http.endpoint.exec.time")
     .label("HTTP Exec Time")
     .register(() -> Histogram.newSingleThreaded(new long[] { 5, 10, 25, 50, 75, 100, 250, 500, 1000 }));
 
   private static final TimeRangeCounter reqCount = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
-    .name("http_req_count")
+    .name("demo.http.req.count")
     .label("HTTP Request Count")
     .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
   private static final CounterMap reqMap = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
-    .name("http_req_map")
+    .name("demo.http.req.map")
     .label("HTTP Request Map")
     .register(CounterMap.newMultiThreaded());
 
   private static final MaxAvgTimeRangeGauge execTime = Metrics.newCollector()
     .unit(DatumUnit.MILLISECONDS)
-    .name("http_exec_time")
+    .name("demo.http.exec.time")
     .label("HTTP Exec Time")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
   private static final Heatmap execTimeHeatmap = Metrics.newCollector()
     .unit(DatumUnit.MILLISECONDS)
-    .name("http_exec_time_heatmap")
+    .name("demo.http.exec.time.heatmap")
     .label("HTTP Exec Time")
     .register(Heatmap.newMultiThreaded(60, 1, TimeUnit.MINUTES, Histogram.DEFAULT_DURATION_BOUNDS_MS));
 
   private static final TopK topExecTime = Metrics.newCollector()
     .unit(DatumUnit.MILLISECONDS)
-    .name("http_top_exec_time")
+    .name("demo.http.top.exec.time")
     .label("HTTP Top Exec Time")
     .register(TopK.newMultiThreaded(10, 60, 10, TimeUnit.MINUTES));
 

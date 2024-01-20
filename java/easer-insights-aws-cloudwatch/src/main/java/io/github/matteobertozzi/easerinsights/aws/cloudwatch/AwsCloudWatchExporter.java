@@ -41,19 +41,19 @@ import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataResponse;
 public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
   private static final MaxAvgTimeRangeGauge cloudWatchPutTime = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
-    .name("aws_cloudwatch_exporter_put_metric_data_time")
+    .name("aws.cloudwatch.exporter.put.metric.data.time")
     .label("CloudWatch Put Metric Data Time")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-  private static final TimeRangeCounter cloudWatchPutCount = Metrics.newCollector()
+  private static final TimeRangeCounter cloudWatchPutSucceded = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
-    .name("aws_cloudwatch_exporter_put_metric_data_count")
-    .label("CloudWatch Put Metric Data Count")
+    .name("aws.cloudwatch.exporter.put.metric.data.succeded")
+    .label("CloudWatch Put Metric Data Succeded")
     .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
   private static final TimeRangeCounter cloudWatchPutFailed = Metrics.newCollector()
     .unit(DatumUnit.COUNT)
-    .name("aws_cloudwatch_exporter_put_metric_data_failed")
+    .name("aws.cloudwatch.exporter.put.metric.data.failed")
     .label("CloudWatch Put Metric Data Failed")
     .register(TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
@@ -121,7 +121,7 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
     try {
       final PutMetricDataResponse resp = cloudWatch.putMetricData(request);
       if (resp.sdkHttpResponse().isSuccessful()) {
-        cloudWatchPutCount.inc();
+        cloudWatchPutSucceded.inc();
       } else {
         cloudWatchPutFailed.inc();
       }

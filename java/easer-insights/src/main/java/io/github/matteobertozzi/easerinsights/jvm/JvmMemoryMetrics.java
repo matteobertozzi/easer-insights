@@ -39,19 +39,19 @@ public final class JvmMemoryMetrics {
 
   private final MaxAvgTimeRangeGauge allocatedMemory = Metrics.newCollector()
     .unit(DatumUnit.BYTES)
-    .name("jvm.memory.allocated_memory")
+    .name("jvm.memory.allocated")
     .label("JVM Allocated Memory")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
   private final MaxAvgTimeRangeGauge usedMemory = Metrics.newCollector()
     .unit(DatumUnit.BYTES)
-    .name("jvm.memory.used_memory")
+    .name("jvm.memory.used")
     .label("JVM Used Memory")
     .register(MaxAvgTimeRangeGauge.newMultiThreaded(60 * 24, 1, TimeUnit.MINUTES));
 
   private final Histogram usedMemoryHisto = Metrics.newCollector()
     .unit(DatumUnit.BYTES)
-    .name("jvm.memory.allocated_memory_histo")
+    .name("jvm.memory.allocated.histo")
     .label("JVM Allocated Memory Histo")
     .register(Histogram.newMultiThreaded(new long[] {
       32 << 20, 64 << 20, 96 << 20, 128 << 20, 160 << 20, 224 << 20, 288 << 20,
