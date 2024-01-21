@@ -39,11 +39,13 @@ class TopKImplMt extends TopKImplSt {
 
   @Override
   public TopKSnapshot dataSnapshot() {
+    final TopList topEntries;
     lock.lock();
     try {
-      return super.dataSnapshot();
+      topEntries = super.dataSnapshotTopList();
     } finally {
       lock.unlock();
     }
+    return snapshotFrom(topEntries);
   }
 }

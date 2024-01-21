@@ -18,10 +18,10 @@
 package io.github.matteobertozzi.easerinsights.metrics.collectors.impl;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
+import io.github.matteobertozzi.easerinsights.tracing.TraceId;
 import io.github.matteobertozzi.easerinsights.tracing.Tracer;
 import io.github.matteobertozzi.rednaco.time.TimeRange;
 import io.github.matteobertozzi.rednaco.time.TimeRange.ResetTimeRangeSlots;
@@ -72,23 +72,35 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
 
   @Override
   public TopKSnapshot dataSnapshot() {
+    return snapshotFrom(dataSnapshotTopList());
+  }
+
+  protected TopList dataSnapshotTopList() {
     final long now = TimeUtil.currentEpochMillis();
     timeRange.update(now, slots.length, this);
 
     final TopList topEntries = new TopList(k);
     timeRange.iterReverse(slots.length, index -> topEntries.merge(slots[index]));
+    return topEntries;
+  }
 
+  protected static TopKSnapshot snapshotFrom(final TopList topEntries) {
+    if (topEntries.isEmpty()) return TopKSnapshot.EMPTY_SNAPSHOT;
+
+    topEntries.sort();
     final TopEntrySnapshot[] entries = new TopEntrySnapshot[topEntries.size()];
     for (int i = 0; i < entries.length; ++i) {
       final TopEntry entry = topEntries.entries[i];
-      entries[i] = new TopEntrySnapshot(entry.key, entry.maxTimestamp, entry.maxValue, entry.minValue, entry.sum, entry.sumSquares, entry.count, entry.traceIds);
+      final String[] traceIds = entry.toTraceIdArray();
+      entries[i] = new TopEntrySnapshot(entry.key, entry.maxTimestamp, entry.maxValue, entry.minValue, entry.sum, entry.sumSquares, entry.count, traceIds);
     }
     return new TopKSnapshot(entries);
   }
 
   private static final class TopEntry implements Comparable<TopEntry> {
-    private final String[] traceIds = new String[8];
+    private final TraceId[] traceIds = new TraceId[8];
     private String key;
+    private int keyHash;
     private long traceIdOffset;
     private long maxTimestamp;
     private long maxValue;
@@ -98,16 +110,25 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
     private long count;
 
     private TopEntry() {
-      reset(null);
+      reset();
     }
 
     private boolean isEmpty() {
       return key == null;
     }
 
-    private TopEntry reset(final String key) {
+    private String[] toTraceIdArray() {
+      final String[] result = new String[(int)Math.min(traceIdOffset, traceIds.length)];
+      for (int i = 0; i < result.length; ++i) {
+        result[i] = traceIds[i].toString();
+      }
+      return result;
+    }
+
+    private TopEntry reset() {
       Arrays.fill(traceIds, null);
-      this.key = key;
+      this.key = null;
+      this.keyHash = 0;
       this.maxTimestamp = 0;
       this.maxValue = Long.MIN_VALUE;
       this.minValue = Long.MAX_VALUE;
@@ -118,9 +139,24 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
       return this;
     }
 
+    private TopEntry reset(final String key, final long timestamp, final long value) {
+      Arrays.fill(traceIds, null);
+      this.traceIds[0] = Tracer.getThreadLocalSpan().traceId();
+      this.traceIdOffset = 1;
+      this.key = key;
+      this.keyHash = key.hashCode();
+      this.maxTimestamp = timestamp;
+      this.maxValue = value;
+      this.minValue = value;
+      this.sumSquares = value * value;
+      this.sum = value;
+      this.count = 1;
+      return this;
+    }
+
     private void update(final long timestamp, final long value) {
       if (value >= this.maxValue) {
-        this.traceIds[(int)(this.traceIdOffset++ & 7)] = Tracer.getThreadLocalSpan().traceId().toString();
+        this.traceIds[(int)(this.traceIdOffset++ & 7)] = Tracer.getThreadLocalSpan().traceId();
         this.maxTimestamp = timestamp;
         this.maxValue = value;
       }
@@ -128,6 +164,19 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
       this.sumSquares += value * value;
       this.sum += value;
       this.count++;
+    }
+
+    private void replace(final TopEntry other) {
+      System.arraycopy(other.traceIds, 0, traceIds, 0, traceIds.length);
+      this.traceIdOffset = other.traceIdOffset;
+      this.key = other.key;
+      this.keyHash = other.keyHash;
+      this.maxTimestamp = other.maxTimestamp;
+      this.maxValue = other.maxValue;
+      this.minValue = other.minValue;
+      this.sumSquares = other.sumSquares;
+      this.sum = other.sum;
+      this.count = other.count;
     }
 
     private void merge(final TopEntry other) {
@@ -159,22 +208,19 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
     }
 
     @Override
-    public int compareTo(final TopEntry o) {
-      if (this == o) return 0;
+    public int compareTo(final TopEntry other) {
+      int cmp = Long.compare(other.maxValue, maxValue);
+      if (cmp != 0) return cmp;
+
+      cmp = Long.compare(other.maxTimestamp, maxTimestamp);
+      if (cmp != 0) return cmp;
+
+      cmp = Long.compare(other.sum, sum);
+      if (cmp != 0) return cmp;
 
       if (key == null) return 1;
-      if (o.key == null) return -1;
-
-      int cmp = Long.compare(o.maxValue, maxValue);
-      if (cmp != 0) return cmp;
-
-      cmp = Long.compare(o.maxTimestamp, maxTimestamp);
-      if (cmp != 0) return cmp;
-
-      cmp = Long.compare(sum, o.sum);
-      if (cmp != 0) return cmp;
-
-      return key.compareTo(o.key);
+      if (other.key == null) return -1;
+      return key.compareTo(other.key);
     }
 
     @Override
@@ -185,7 +231,7 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
     }
   }
 
-  private static class TopList {
+  protected static final class TopList {
     private final TopEntry[] entries;
 
     private TopList(final int k) {
@@ -193,6 +239,15 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
       for (int i = 0; i < entries.length; ++i) {
         entries[i] = new TopEntry();
       }
+    }
+
+    private boolean isEmpty() {
+      for (int i = 0; i < entries.length; ++i) {
+        if (!entries[i].isEmpty()) {
+          return false;
+        }
+      }
+      return true;
     }
 
     private int size() {
@@ -206,8 +261,12 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
 
     private void clear() {
       for (int i = 0; i < entries.length; ++i) {
-        entries[i].reset(null);
+        entries[i].reset();
       }
+    }
+
+    private void sort() {
+      Arrays.sort(entries);
     }
 
     private void merge(final TopList other) {
@@ -216,59 +275,60 @@ public class TopKImplSt implements TopK, ResetTimeRangeSlots, UpdateTimeRangeSlo
       }
     }
 
-    private void merge(final TopEntry entry) {
+    private void merge(final TopEntry mergeEntry) {
+      final String key = mergeEntry.key;
+      final int keyHash = mergeEntry.keyHash;
       boolean isGtThanCurrent = false;
-      int emptySlot = -1;
       for (int i = 0; i < entries.length; i++) {
-        if (Objects.equals(entries[i].key, entry.key)) {
-          entries[i].merge(entry);
+        final TopEntry entry = entries[i];
+        final boolean hasKey = entry.key != null;
+        if (hasKey) {
+          if (keyHash == entry.keyHash && key.equals(entry.key)) {
+            entry.merge(mergeEntry);
+            return;
+          }
+
+          isGtThanCurrent |= (mergeEntry.maxValue > entry.maxValue);
+        } else {
+          // we have reached the end of populated entries
+          // we are sure the key is not in the TopK list.
+          entry.replace(mergeEntry);
           return;
         }
-
-        isGtThanCurrent |= (entry.maxValue >= entries[i].maxValue);
-        if (entries[i].isEmpty()) {
-          emptySlot = i;
-          break;
-        }
-      }
-
-      if (emptySlot >= 0) {
-        entries[emptySlot].reset(entry.key).merge(entry);
-        Arrays.sort(entries);
-        return;
       }
 
       if (isGtThanCurrent) {
-        entries[entries.length - 1].reset(entry.key).merge(entry);
+        // drop the last entry and replace it with the new key
         Arrays.sort(entries);
+        entries[entries.length - 1].replace(mergeEntry);
       }
     }
 
     private void add(final String key, final long timestamp, final long value) {
+      final int keyHash = key.hashCode();
       boolean isGtThanCurrent = false;
-      int emptySlot = -1;
       for (int i = 0; i < entries.length; i++) {
-        if (Objects.equals(entries[i].key, key)) {
-          entries[i].update(timestamp, value);
+        final TopEntry entry = entries[i];
+        final boolean hasKey = entry.key != null;
+        if (hasKey) {
+          if (keyHash == entry.keyHash && key.equals(entry.key)) {
+            entry.update(timestamp, value);
+            return;
+          }
+
+          isGtThanCurrent |= (value >= entry.maxValue);
+        } else {
+          // we have reached the end of populated entries
+          // we are sure the key is not in the TopK list.
+          entry.reset(key, timestamp, value);
           return;
         }
-
-        isGtThanCurrent |= (value >= entries[i].maxValue);
-        if (entries[i].isEmpty()) {
-          emptySlot = i;
-          break;
-        }
-      }
-
-      if (emptySlot >= 0) {
-        entries[emptySlot].reset(key).update(timestamp, value);
-        Arrays.sort(entries);
-        return;
       }
 
       if (isGtThanCurrent) {
-        entries[entries.length - 1].reset(key).update(timestamp, value);
+        // drop the last entry and replace it with the new key
         Arrays.sort(entries);
+        entries[entries.length - 1].reset(key, timestamp, value);
       }
     }
   }
