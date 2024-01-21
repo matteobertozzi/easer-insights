@@ -235,7 +235,7 @@ public class AsyncTextLogWriter implements AutoCloseable {
     }
   }
 
-  public final class AsyncTextLogBuffer extends AbstractLogBuffer implements ByteArrayAppender {
+  public static final class AsyncTextLogBuffer extends AbstractLogBuffer implements ByteArrayAppender {
     private final ArrayList<RecyclableBlock> localBlocks = new ArrayList<>();
     private final AtomicLong lastFlushNs = new AtomicLong(System.nanoTime());
     private final ArrayBlockingQueue<RecyclableBlock> poolQueue;
@@ -243,7 +243,7 @@ public class AsyncTextLogWriter implements AutoCloseable {
     private final int blockSize;
 
     private RecyclableBlock currentBlock;
-    private int currentEntryLen = 0;
+    private int currentEntryLen;
     private int lastEntryBlkOff;
 
     private int entryAvgLen = 128;
