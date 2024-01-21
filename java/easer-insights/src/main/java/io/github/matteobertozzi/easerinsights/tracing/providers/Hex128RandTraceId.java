@@ -56,15 +56,14 @@ public final class Hex128RandTraceId implements TraceId {
   @Override
   public String toString() {
     if (hex != null) return hex;
-
-    hex = buildString();
-    return hex;
+    return hex = buildString();
   }
 
   private String buildString() {
     final StringBuilder builder = new StringBuilder(32);
-    Base16.base16().encodeInt64(builder, hi);
-    Base16.base16().encodeInt64(builder, lo);
+    final Base16 b16 = Base16.base16();
+    b16.encodeInt64(builder, hi);
+    b16.encodeInt64(builder, lo);
     return builder.toString();
   }
 

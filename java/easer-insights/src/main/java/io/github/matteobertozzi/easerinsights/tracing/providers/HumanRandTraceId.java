@@ -64,9 +64,7 @@ public class HumanRandTraceId implements TraceId {
   @Override
   public String toString() {
     if (str != null) return str;
-
-    str = buildString();
-    return str;
+    return str = buildString();
   }
 
   private String buildString() {

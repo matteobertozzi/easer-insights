@@ -51,15 +51,11 @@ public final class Hex64RandSpanId implements SpanId {
   @Override
   public String toString() {
     if (hex != null) return hex;
-
-    hex = buildString();
-    return hex;
+    return hex = buildString();
   }
 
   private String buildString() {
-    final StringBuilder builder = new StringBuilder(16);
-    Base16.base16().encodeInt64(builder, id);
-    return builder.toString();
+    return Base16.base16().encodeInt64(id);
   }
 
   private static final class Hex64RandSpanIdProvider implements SpanIdProvider {

@@ -47,9 +47,7 @@ public class Base58RandSpanId implements SpanId {
   @Override
   public String toString() {
     if (b58 != null) return b58;
-
-    b58 = buildString();
-    return b58;
+    return b58 = buildString();
   }
 
   private String buildString() {
