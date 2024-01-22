@@ -33,7 +33,7 @@
   </developers>
 
   <properties>
-    <async.profiler.version>2.9</async.profiler.version>
+    <async.profiler.version>3.0</async.profiler.version>
 
     <junit.version>5.10.1</junit.version>
 
