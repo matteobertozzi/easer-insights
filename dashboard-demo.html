@@ -113,6 +113,7 @@
     echarts.registerTheme('demoTheme', demoTheme);
     const charts = {};
     const gridElements = {};
+    const gridMetrics = {};
     const grid = GridStack.init({
       float: false,
       column: 12,
@@ -134,24 +135,35 @@
     }
 
     const search = debounce(300, (event) => {
-      const searchItems = searchBox.value.split('|').map(k => k.trim()).filter(k => k);
-      for (const [key, elem] of Object.entries(gridElements)) {
-        let matches = searchItems.length == 0;
-        for (const searchItem of searchItems) {
-          if (searchItem && key.includes(searchItem)) {
-            matches = true;
-            break;
+      grid.batchUpdate(false);
+      try {
+        const searchItems = searchBox.value.split('|').map(k => k.trim().toLowerCase()).filter(k => k);
+        for (const [key, elem] of Object.entries(gridElements)) {
+          const nameEof = key.indexOf('/');
+          const name = (nameEof < 0) ? key : key.substring(0, nameEof);
+          if (!gridMetrics[name]) {
+            console.error('unable to find metric info', key, name);
+          }
+
+          let matches = searchItems.length == 0;
+          for (const searchItem of searchItems) {
+            if (key.toLowerCase().includes(searchItem) || gridMetrics[name].label.toLowerCase().includes(searchItem)) {
+              matches = true;
+              break;
+            }
+          }
+
+          const node = elem.parentNode.parentNode;
+          if (matches) {
+            grid.addWidget(node);
+          } else {
+            grid.removeWidget(node);
           }
         }
-
-        const node = elem.parentNode.parentNode;
-        if (matches) {
-          grid.addWidget(node);
-        } else {
-          grid.removeWidget(node);
-        }
+      } finally {
+        grid.compact(); // TODO: fix sorting
+        grid.batchUpdate(true);
       }
-      grid.compact();
     });
 
     const searchBox = document.getElementById('search');
@@ -472,7 +484,7 @@
         p99.push(Math.round(pValue[1]));
       }
 
-      newChart(metricKey(metric) + '_perc', metric.label, {
+      newChart(metricKey(metric) + '/perc', metric.label, {
         animation: false,
         grid: { left: 50, top: 15, right: 10, bottom: 42 },
         xAxis: {
@@ -776,6 +788,7 @@
           continue;
         }
 
+        gridMetrics[metric.name] = { label: metric.label, unit: metric.unit, type: metric.type };
         for (const r of renderers) {
           r(metric);
         }
