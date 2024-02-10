@@ -91,7 +91,12 @@ public final class LogUtil {
 
   public static StringBuilder appendStackTrace(final StringBuilder builder, final Throwable exception) {
     builder.append(exception.getClass().getName()).append(": ").append(exception.getMessage()).append(System.lineSeparator());
-    return appendStackTrace(builder, exception.getStackTrace(), 0);
+    appendStackTrace(builder, exception.getStackTrace(), 0);
+    for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
+      builder.append("Caused by: ").append(cause.getClass().getName()).append(": ").append(cause.getMessage()).append(System.lineSeparator());
+      appendStackTrace(builder, cause.getStackTrace(), 0);
+    }
+    return builder;
   }
 
   public static StringBuilder appendStackTrace(final StringBuilder builder, final StackTraceElement[] stackTrace, final int fromLevel) {

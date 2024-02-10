@@ -48,11 +48,12 @@ public final class LogBufferUtil {
 
     @Override
     public LogBuffer appendStackTrace(final Throwable exception) {
-      append(exception.getClass().getName());
-      appendAscii(": ");
-      append(exception.getMessage());
-      appendAscii(System.lineSeparator());
+      append(exception.getClass().getName()).appendAscii(": ").append(exception.getMessage()).appendAscii(System.lineSeparator());
       appendStackTrace(exception.getStackTrace(), 0);
+      for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
+        appendAscii("Caused by: ").append(cause.getClass().getName()).appendAscii(": ").append(cause.getMessage()).appendAscii(System.lineSeparator());
+        appendStackTrace(cause.getStackTrace(), 0);
+      }
       return this;
     }
 
