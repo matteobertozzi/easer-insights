@@ -202,12 +202,29 @@
       return items;
     }
 
+    const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    function buildDayMarklines(lastInterval, window, count) {
+      const marklines = [];
+      const firstInterval = lastInterval - (window * count);
+      let lastDate = new Date(firstInterval);
+      for (let i = 0, ts = firstInterval; ts < lastInterval; ts += window, ++i) {
+        const d = new Date(ts);
+        if (lastDate.getDate() != d.getDate() || lastDate.getMonth() != d.getMonth() || lastDate.getFullYear() != d.getFullYear()) {
+          if (window < (60 * 60 * 1000) || d.getDay() == 0) {
+            marklines.push({ xAxis: i, label: {formatter: WEEKDAYS[d.getDay()] + ' ' + d.getDate()} });
+          }
+          lastDate = d;
+        }
+      }
+      return marklines;
+    }
+
     function renderTimeRangeCounter(metric) {
       const metricData = metric.data;
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       newChart(metricKey(metric), metric.label, {
         animation: false,
-        grid: { left: 50, top: 15, right: 10, bottom: 42 },
+        grid: { left: 50, top: 10, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
@@ -235,7 +252,16 @@
         },
         dataZoom: [{ show: true, realtime: true, height: 14, bottom: 10, textStyle: { fontSize: 8 } }],
         series: [
-          { type: 'bar', name: metric.name, data: metricData.counters }
+          {
+            type: 'bar', name: metric.name, data: metricData.counters,
+            markLine: {
+              symbol:['none', 'none'],
+              emphasis: { disabled: true },
+              lineStyle: { color: '#aaa' },
+              label: {fontSize: 8, distance: 1},
+              data: buildDayMarklines(metricData.lastInterval, metricData.window, metricData.counters.length)
+            }
+          }
         ]
       });
     }
@@ -245,7 +271,7 @@
       const humanConverter = METRIC_UNIT_CONVERTER[metric.unit];
       newChart(metricKey(metric), metric.label, {
         animation: false,
-        grid: { left: 50, top: 15, right: 10, bottom: 42 },
+        grid: { left: 50, top: 10, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
@@ -287,7 +313,14 @@
             lineStyle: { width: 1 },
             emphasis: { focus: 'series' },
             showSymbol: false,
-            data: metricData.max
+            data: metricData.max,
+            markLine: {
+              symbol:['none', 'none'],
+              emphasis: { disabled: true },
+              lineStyle: { color: '#aaa' },
+              label: {fontSize: 8, distance: 1},
+              data: buildDayMarklines(metricData.lastInterval, metricData.window, metricData.count.length)
+            }
           },
           {
             name: 'avg',
@@ -378,7 +411,7 @@
 
       newChart(metricKey(metric), metric.label, {
         animation: false,
-        grid: { left: 50, top: 5, right: 5, bottom: 35 },
+        grid: { left: 50, top: 10, right: 5, bottom: 35 },
         tooltip: {
           confine: true,
           padding: 4,
@@ -435,6 +468,13 @@
               shadowBlur: 10,
               shadowColor: 'rgba(0, 0, 0, 0.5)'
             }
+          },
+          markLine: {
+            symbol:['none', 'none'],
+            emphasis: { disabled: true },
+            lineStyle: { color: '#aaa' },
+            label: {fontSize: 8, distance: 1},
+            data: buildDayMarklines(metricData.lastInterval, metricData.window, numIntervals)
           }
         }]
       });
@@ -486,7 +526,7 @@
 
       newChart(metricKey(metric) + '/perc', metric.label, {
         animation: false,
-        grid: { left: 50, top: 15, right: 10, bottom: 42 },
+        grid: { left: 50, top: 10, right: 10, bottom: 42 },
         xAxis: {
           type: 'category',
           axisLabel: { fontSize: 8 },
@@ -528,7 +568,14 @@
             lineStyle: { width: 1 },
             emphasis: { focus: 'series' },
             showSymbol: false,
-            data: metricData.maxValue
+            data: metricData.maxValue,
+            markLine: {
+              symbol:['none', 'none'],
+              emphasis: { disabled: true },
+              lineStyle: { color: '#aaa' },
+              label: {fontSize: 8, distance: 1},
+              data: buildDayMarklines(metricData.lastInterval, metricData.window, numIntervals)
+            }
           },
           {
             name: 'p99',
