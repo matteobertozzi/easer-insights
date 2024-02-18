@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.github.matteobertozzi.easerinsights.jdbc.connection;
 
 import java.sql.Connection;
@@ -15,6 +32,8 @@ import io.github.matteobertozzi.easerinsights.jdbc.DbInfo;
 import io.github.matteobertozzi.easerinsights.jdbc.DbType;
 import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.easerinsights.logging.providers.TextLogProvider;
+import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
+import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
 
 public class TestDbConnectionPool {
   static {
@@ -33,15 +52,19 @@ public class TestDbConnectionPool {
       newDbInfo("host-3", "db-3c"),
     };
 
-    try (final DbConnectionPool pool = new DbConnectionPool("TestPool")) {
+    //try (final DbConnectionPool pool = new DbGlobalConnectionPool("TestPool", 4, Duration.ofMillis(200), Duration.ofMillis(500))) {
+    try (final DbConnectionPool pool = DbConnectionPool.newPerThreadPool("TestPool")) {
       pool.start();
 
-      for (int i = 0; i < 2; ++i) {
+      for (int i = 0; i < 5; ++i) {
         for (final DbInfo dbInfo: dbInfos) {
           try (DbConnection con = pool.getConnection(dbInfo)) {
-            System.out.println(con);
+            System.out.println("OPEN " + con);
+            System.out.println(MetricsRegistry.INSTANCE.humanReport("jdbc.connection.active"));
+            System.out.println("CLOSE " + con);
           }
         }
+        ThreadUtil.sleep(250);
       }
     }
   }

@@ -18,10 +18,11 @@
 package io.github.matteobertozzi.easerinsights.jdbc.connection;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.sql.SQLException;
 
 public class DbConnectionException extends IOException {
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   private final String sqlState;
 

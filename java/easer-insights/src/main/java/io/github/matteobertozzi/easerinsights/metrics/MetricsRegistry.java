@@ -170,6 +170,28 @@ public final class MetricsRegistry {
     }
   }
 
+  public String humanReport(final String prefix) {
+    lock.lock();
+    try {
+      final StringBuilder sb = new StringBuilder(1 << 20);
+      collectorsPages.forEach((page, pageOff, pageLen) -> {
+        for (int i = 0; i < pageLen; ++i) {
+          final MetricCollector metricCollector = page[pageOff + i];
+          if (!metricCollector.definition().name().startsWith(prefix)) {
+            continue;
+          }
+
+          final MetricSnapshot snapshot = metricCollector.snapshot();
+          sb.append("\n--- ").append(snapshot.label()).append(" (").append(snapshot.name()).append(") ---\n");
+          snapshot.data().addToHumanReport(metricCollector.definition(), sb);
+        }
+      });
+      return sb.toString();
+    } finally {
+      lock.unlock();
+    }
+  }
+
   public List<MetricSnapshot> snapshot() {
     lock.lock();
     try {

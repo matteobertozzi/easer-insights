@@ -24,9 +24,11 @@ import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.jdbc.DbInfo;
 import io.github.matteobertozzi.easerinsights.metrics.MetricDimensionGroup;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.Heatmap;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.Histogram;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeDrag;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TopK;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
@@ -53,7 +55,7 @@ final class DbStats extends MetricDimensionGroup {
   // ====================================================================================================
   private static final TopK connectionTopTimes = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
-    .name("jdbc.connectio.top.times")
+    .name("jdbc.connection.top.times")
     .label("JDBC Connection 15 Top Times")
     .register(TopK.newMultiThreaded(15, 24, 1, TimeUnit.HOURS));
 
@@ -78,6 +80,12 @@ final class DbStats extends MetricDimensionGroup {
     .label("JDBC Connection Pool Time")
     .register(this, MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
+  private final TimeRangeDrag activeConnections = Metrics.newCollector()
+    .unit(DatumUnit.COUNT)
+    .name("jdbc.connection.active")
+    .label("JDBC Active Connections")
+    .register(this, TimeRangeDrag.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
   // ====================================================================================================
   //  Fetch Queries Related
   // ====================================================================================================
@@ -87,17 +95,11 @@ final class DbStats extends MetricDimensionGroup {
     .label("JDBC Fetch Query Failures")
     .register(this, TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-  private final MaxAvgTimeRangeGauge fetchQueryTime = Metrics.newCollector()
+  private final Heatmap fetchQueryTime  = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
     .name("jdbc.fetch.query.time")
     .label("JDBC Fetch Query Time")
-    .register(this, MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
-
-  private final Histogram fetchQueryTimeHisto  = Metrics.newCollector()
-    .unit(DatumUnit.NANOSECONDS)
-    .name("jdbc.fetch.query.time.histo")
-    .label("JDBC Fetch Query Time Histo")
-    .register(this, Histogram.newMultiThreaded(Histogram.DEFAULT_DURATION_BOUNDS_NS));
+    .register(this, Heatmap.newMultiThreaded(60, 1, TimeUnit.MINUTES, Histogram.DEFAULT_DURATION_BOUNDS_NS));
 
   private final TopK fetchQueryTopTimes = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
@@ -120,17 +122,11 @@ final class DbStats extends MetricDimensionGroup {
     .label("JDBC Update Query Failures")
     .register(this, TimeRangeCounter.newMultiThreaded(60, 1, TimeUnit.MINUTES));
 
-  private final MaxAvgTimeRangeGauge updateQueryTime = Metrics.newCollector()
+  private final Heatmap updateQueryTime  = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
     .name("jdbc.update.query.time")
     .label("JDBC Update Query Time")
-    .register(this, MaxAvgTimeRangeGauge.newMultiThreaded(60, 1, TimeUnit.MINUTES));
-
-  private final Histogram updateQueryTimeHisto  = Metrics.newCollector()
-    .unit(DatumUnit.NANOSECONDS)
-    .name("jdbc.update.query.time.histo")
-    .label("JDBC Update Query Time Histo")
-    .register(this, Histogram.newMultiThreaded(Histogram.DEFAULT_DURATION_BOUNDS_NS));
+    .register(this, Heatmap.newMultiThreaded(60, 1, TimeUnit.MINUTES, Histogram.DEFAULT_DURATION_BOUNDS_NS));
 
   private final TopK updateQueryTopTimes = Metrics.newCollector()
     .unit(DatumUnit.NANOSECONDS)
@@ -138,10 +134,17 @@ final class DbStats extends MetricDimensionGroup {
     .label("JDBC Update Query Top 15 Times")
     .register(this, TopK.newMultiThreaded(15, 24, 1, TimeUnit.HOURS));
 
-
   // ====================================================================================================
   //  Connections Related
   // ====================================================================================================
+  public void incOpenConnections() {
+    activeConnections.inc();
+  }
+
+  public void decOpenConnections() {
+    activeConnections.dec();
+  }
+
   public void addConnectionTime(final long elapsedNs) {
     connectionTime.sample(elapsedNs);
     connectionTopTimes.sample(key, elapsedNs);
@@ -162,7 +165,6 @@ final class DbStats extends MetricDimensionGroup {
   public void addExecuteQuery(final String sql, final long elapsedNs, final long rowCount) {
     final long now = TimeUtil.currentEpochMillis();
     fetchQueryTime.sample(now, elapsedNs);
-    fetchQueryTimeHisto.sample(now, elapsedNs);
     fetchQueryTopTimes.sample(sql, now, elapsedNs);
     fetchQueryTopRows.sample(sql, now, rowCount);
   }
@@ -171,7 +173,6 @@ final class DbStats extends MetricDimensionGroup {
     final long now = TimeUtil.currentEpochMillis();
     fetchQueryFailures.inc(now);
     fetchQueryTime.sample(now, elapsedNs);
-    fetchQueryTimeHisto.sample(now, elapsedNs);
     fetchQueryTopTimes.sample(sql, now, elapsedNs);
   }
 
@@ -181,7 +182,6 @@ final class DbStats extends MetricDimensionGroup {
   public void addExecuteUpdate(final String sql, final long elapsedNs) {
     final long now = TimeUtil.currentEpochMillis();
     updateQueryTime.sample(now, elapsedNs);
-    updateQueryTimeHisto.sample(now, elapsedNs);
     updateQueryTopTimes.sample(sql, now, elapsedNs);
   }
 
@@ -189,7 +189,6 @@ final class DbStats extends MetricDimensionGroup {
     final long now = TimeUtil.currentEpochMillis();
     updateQueryFailures.inc(now);
     updateQueryTime.sample(now, elapsedNs);
-    updateQueryTimeHisto.sample(now, elapsedNs);
     updateQueryTopTimes.sample(sql, now, elapsedNs);
   }
 }

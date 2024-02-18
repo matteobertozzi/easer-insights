@@ -99,10 +99,12 @@ public final class DbConnection implements Closeable {
       } catch (final SQLException e) {
         rollback();
       }
-      dbPool.addToPool(Thread.currentThread(), this);
+      if (!dbPool.addToPool(Thread.currentThread(), this)) {
+        DbConnectionProvider.closeQuietly(dbStats, connection);
+      }
     } else {
       Logger.debug("close direct no pool associated: {}", this);
-      closeQuietly(connection);
+      DbConnectionProvider.closeQuietly(dbStats, connection);
     }
 
     resetQueryPerTransaction();
@@ -115,33 +117,40 @@ public final class DbConnection implements Closeable {
   }
 
   // ====================================================================================================
-  //  Connection state related
+  //  INTERNAL Connection state related
   // ====================================================================================================
   DbStats stats() {
     return dbStats;
   }
 
-  public long getOpenNs() {
+  long getOpenNs() {
     return openNs;
   }
 
-  public long getLastUpdateNs() {
+  long getLastUpdateNs() {
     return lastUpdateNs.get();
   }
 
-  public boolean isBusy() {
+  boolean isBusy() {
     return busyName.get() != null;
   }
 
-  public void setPool(final DbConnectionPool newPool) {
+  boolean hasPool() {
+    return pool.get() != null;
+  }
+
+  void setPool(final DbConnectionPool newPool) {
     this.pool.set(newPool);
   }
 
-  public void acquire(final String requestedBy) {
+  void acquire(final String requestedBy) {
     this.lastUpdateNs.set(System.nanoTime());
     this.busyName.set(requestedBy);
   }
 
+  // ====================================================================================================
+  //  Connection state related
+  // ====================================================================================================
   public boolean isClosed() {
     try {
       return connection.isClosed();
@@ -163,9 +172,12 @@ public final class DbConnection implements Closeable {
       // Don't reuse it for the pool
       this.pool.set(null);
       return false;
+    } catch (final UnsupportedOperationException e) {
+      Logger.debug("using isClosed(), unable to verify the validity state of the connection: {}", e.getMessage());
+      return !isClosed();
     } catch (final Throwable e) {
       // probably method not supported
-      Logger.debug(e, "unable to verify the validity state of the connection, use closed");
+      Logger.debug(e, "using isClosed(), unable to verify the validity state of the connection");
       return !isClosed();
     }
   }
@@ -198,7 +210,7 @@ public final class DbConnection implements Closeable {
     try {
       connection.commit();
     } catch (final SQLException e) {
-      Logger.alert(busyName.get() + " unable to commit transaction");
+      Logger.alert("{} unable to commit transaction", busyName.get());
 
       // Don't reuse it for the pool
       this.pool.set(null);
@@ -213,7 +225,7 @@ public final class DbConnection implements Closeable {
       connection.rollback();
       return true;
     } catch (final SQLException e) {
-      Logger.alert(busyName.get() + " unable to rollback transaction");
+      Logger.alert("{} unable to rollback transaction", busyName.get());
 
       // Don't reuse it for the pool
       this.pool.set(null);
@@ -230,7 +242,7 @@ public final class DbConnection implements Closeable {
       connection.rollback(savepoint);
       return true;
     } catch (final SQLException e) {
-      Logger.alert("{} unable to rollback transaction, savepoint={}", busyName.get(), savepoint);
+      Logger.alert("{} unable to rollback transaction, {savepoint}", busyName.get(), savepoint);
 
       // Don't reuse it for the pool
       this.pool.set(null);
@@ -271,11 +283,10 @@ public final class DbConnection implements Closeable {
       Logger.trace("release savepoint not supported for {}: {}", getDbType(), e.getMessage());
     } catch (final Exception e) {
       switch (getDbType()) {
-        case SQLSERVER, ORACLE, SQLITE: {
+        case SQLSERVER, ORACLE, SQLITE -> {
           // no need for sql server to release the savepoint
           Logger.debug("unable to release savepoint for {}: {}", getDbType(), e.getMessage());
-          break;
-        } default: {
+        } default -> {
           Logger.error(e, "unable to release savepoint");
           throw e;
         }
@@ -532,15 +543,6 @@ public final class DbConnection implements Closeable {
   // ====================================================================================================
   // Raw close() helpers
   // ====================================================================================================
-  static void closeQuietly(final Connection connection) {
-    if (connection == null) return;
-    try {
-      connection.close();
-    } catch (final SQLException e) {
-      Logger.error(e, "unable to close the Connection {}: {}", e.getSQLState(), connection);
-    }
-  }
-
   public static void closeQuietly(final Statement stmt) {
     if (stmt == null) return;
     try {

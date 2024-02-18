@@ -17,6 +17,7 @@
 
 package io.github.matteobertozzi.easerinsights.jdbc.connection;
 
+import java.lang.reflect.Constructor;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -72,9 +73,9 @@ public final class DbConnectionProvider {
       jdbcGlobalJdbcInitLock.lock();
       try {
         if (!jdbcDriversLoaded.contains(driverName)) {
-          Class.forName(driverName).getConstructor();
+          final Constructor<?> ctor = Class.forName(driverName).getConstructor();
           jdbcDriversLoaded.add(driverName);
-          Logger.debug("loaded {}", driverName);
+          Logger.debug("loaded {}: {}", driverName, ctor);
         }
       } finally {
         jdbcGlobalJdbcInitLock.unlock();
@@ -106,6 +107,7 @@ public final class DbConnectionProvider {
       final long elapsedTime = System.nanoTime() - startTime;
       final DbStats dbStats = DbStats.get(dbInfo);
       dbStats.addConnectionTime(elapsedTime);
+      dbStats.incOpenConnections();
 
       // Initialize the connection
       try {
@@ -116,11 +118,22 @@ public final class DbConnectionProvider {
       connection.setAutoCommit(true);
       return new DbConnection(dbInfo, dbStats, connection);
     } catch (final SQLException e) {
-      DbConnection.closeQuietly(connection);
-      DbStats.get(dbInfo).addConnectionFailure(System.nanoTime() - startTime);
+      final DbStats stats = DbStats.get(dbInfo);
+      closeQuietly(stats, connection);
+      stats.addConnectionFailure(System.nanoTime() - startTime);
 
       Logger.error("unable to create a new db-connection: {} {}", e.getErrorCode(), e.getMessage());
       throw new DbConnectionException(e, "Unable to connect to server DB : " + dbInfo.url());
+    }
+  }
+
+  static void closeQuietly(final DbStats stats, final Connection connection) {
+    if (connection == null) return;
+    try {
+      stats.decOpenConnections();
+      connection.close();
+    } catch (final SQLException e) {
+      Logger.error(e, "unable to close the Connection {}: {}", e.getSQLState(), connection);
     }
   }
 

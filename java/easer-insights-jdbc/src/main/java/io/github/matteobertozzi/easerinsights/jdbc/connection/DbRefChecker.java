@@ -19,7 +19,7 @@ package io.github.matteobertozzi.easerinsights.jdbc.connection;
 
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -28,6 +28,9 @@ import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.rednaco.strings.StringConverter;
 
 interface DbRefChecker {
+  int SUSPICIOUS_OPEN_RESULT_SET_COUNT = StringConverter.toInt(System.getProperty("easer.insights.jdbc.suspicious.open.resultset.count"), 10);
+  int SUSPICIOUS_OPEN_STATEMENT_COUNT = StringConverter.toInt(System.getProperty("easer.insights.jdbc.suspicious.open.statement.count"), 20);
+
   boolean ENABLE_REF_CHECKER = StringConverter.toBoolean(System.getProperty("easer.insights.jdbc.ref.checker.enabled"), false);
   Function<DbInfo, DbRefChecker> REF_CHECKER_FACTORY = ENABLE_REF_CHECKER ? SimpleRefChecker::get : NoOpRefChecker::get;
 
@@ -48,6 +51,9 @@ interface DbRefChecker {
     boolean removeResultSet(ResultSet rs);
   }
 
+  // ==========================================================================================
+  //  No-Op Ref Checker
+  // ==========================================================================================
   final class NoOpRefChecker implements DbRefChecker {
     private static final NoOpRefChecker INSTANCE = new NoOpRefChecker();
 
@@ -66,7 +72,7 @@ interface DbRefChecker {
     }
   }
 
-  class NoOpConnectionRefChecker implements DbConnectionRefChecker {
+  final class NoOpConnectionRefChecker implements DbConnectionRefChecker {
     private static final NoOpConnectionRefChecker INSTANCE = new NoOpConnectionRefChecker();
 
     @Override public void destroy() {}
@@ -76,10 +82,14 @@ interface DbRefChecker {
     @Override public boolean removeResultSet(final ResultSet rs) { return true; }
   }
 
+  // ==========================================================================================
+  //  Simple Ref Checker
+  // ==========================================================================================
   final class SimpleRefChecker implements DbRefChecker {
-    private static final ConcurrentHashMap<DbInfo, DbRefChecker> refsMap = new ConcurrentHashMap<>(512);
+    private static final ConcurrentHashMap<DbInfo, DbRefChecker> refsMap = new ConcurrentHashMap<>(32);
 
     private final ConcurrentHashMap<DbConnection, DbConnectionRefChecker> connectionRefs = new ConcurrentHashMap<>(64);
+    //private final Set<DbConnection> pooledRefs = ConcurrentHashMap.newKeySet(64);
 
     private SimpleRefChecker(final DbInfo dbInfo) {
       // no-op
@@ -93,22 +103,40 @@ interface DbRefChecker {
 
     @Override
     public DbConnectionRefChecker addConnection(final DbConnection connection) {
-      return connectionRefs.computeIfAbsent(connection, SimpleConnectionRefChecker::new);
+      //pooledRefs.remove(connection);
+
+      final SimpleConnectionRefChecker refChecker = new SimpleConnectionRefChecker(connection);
+      if (connectionRefs.put(connection, refChecker) != null) {
+        Logger.warn("CONNECTION ALREADY REGISTERED: {}", connection);
+      }
+      return refChecker;
     }
 
     @Override
     public void closeConnection(final DbConnection connection) {
       final DbConnectionRefChecker refChecker = connectionRefs.remove(connection);
-      if (refChecker != null) refChecker.destroy();
+      if (refChecker != null) {
+        refChecker.destroy();
+      //} else if (!pooledRefs.remove(connection)) {
+      } else {
+        Logger.warn("CONNECTION ALREADY CLOSED: {}", connection);
+      }
+
+      //if (connection.hasPool()) {
+        //pooledRefs.add(connection);
+      //}
     }
   }
 
   final class SimpleConnectionRefChecker implements DbConnectionRefChecker {
-    private final Set<Statement> statementRefs = ConcurrentHashMap.newKeySet(32);
-    private final Set<ResultSet> resultSetRefs = ConcurrentHashMap.newKeySet(32);
+    private final ConcurrentHashMap<Statement, String> statementRefs = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<ResultSet, String> resultSetRefs = new ConcurrentHashMap<>();
+    private final String creationStackTrace;
+    private long lastUpdate;
 
     private SimpleConnectionRefChecker(final DbConnection connection) {
-      // no-op
+      this.lastUpdate = System.currentTimeMillis();
+      this.creationStackTrace = buildStackTraceForRef(connection);
     }
 
     @Override
@@ -118,36 +146,70 @@ interface DbRefChecker {
       }
 
       Logger.error("connection closed with {} resultSet active and {} statements active", resultSetRefs.size(), statementRefs.size());
-      for (final ResultSet rs: resultSetRefs) {
-        Logger.warn("RESULT-SET NOT CLOSED: {}", rs);
-        DbConnection.closeQuietly(rs);
+      for (final Entry<ResultSet, String> entry: resultSetRefs.entrySet()) {
+        Logger.warn("RESULT-SET NOT CLOSED: {}", entry.getKey());
+        DbConnection.closeQuietly(entry.getKey());
       }
       resultSetRefs.clear();
-      for (final Statement stmt: statementRefs) {
-        Logger.warn("STATEMENT NOT CLOSED: {}", stmt);
-        DbConnection.closeQuietly(stmt);
+
+      for (final Entry<Statement, String> entry: statementRefs.entrySet()) {
+        Logger.warn("STATEMENT NOT CLOSED: {}", entry.getKey());
+        DbConnection.closeQuietly(entry.getKey());
       }
       statementRefs.clear();
     }
 
     @Override
     public void addStatement(final Statement statement) {
-      statementRefs.add(statement);
+      lastUpdate = System.nanoTime();
+      final String oldTrace = statementRefs.put(statement, buildStackTraceForRef(statement));
+      if (oldTrace != null) {
+        Logger.error(new IllegalStateException(), "STATEMENT REGISTERED TWICE: {}, oldTrace: {}", statement, oldTrace);
+      }
+
+      if (statementRefs.size() >= SUSPICIOUS_OPEN_STATEMENT_COUNT) {
+        Logger.warn("suspicious open Statement {count}: {}", statementRefs.size(), String.join("-----\n", statementRefs.values()));
+      }
     }
 
     @Override
     public boolean removeStatement(final Statement statement) {
-      return statementRefs.remove(statement);
+      lastUpdate = System.nanoTime();
+      if (statementRefs.remove(statement) == null) {
+        Logger.error(new IllegalStateException(), "STATEMENT NOT REGISTERED: {}", statement);
+        return false;
+      }
+      return true;
     }
 
     @Override
     public void addResultSet(final ResultSet rs) {
-      resultSetRefs.add(rs);
+      lastUpdate = System.nanoTime();
+      final String oldTrace = resultSetRefs.put(rs, buildStackTraceForRef(rs));
+      if (oldTrace != null) {
+        Logger.error(new IllegalStateException(), "RESULT-SET REGISTERED TWICE {}, oldTrace: {}", rs, oldTrace);
+      }
+
+      if (resultSetRefs.size() >= SUSPICIOUS_OPEN_RESULT_SET_COUNT) {
+        Logger.warn("suspicious open ResultSet {count}", resultSetRefs.size(), String.join("-----\n", statementRefs.values()));
+      }
     }
 
     @Override
     public boolean removeResultSet(final ResultSet rs) {
-      return resultSetRefs.remove(rs);
+      lastUpdate = System.nanoTime();
+      if (resultSetRefs.remove(rs) == null) {
+        Logger.error(new IllegalStateException(), "RESULT-SET NOT REGISTERED: {}", rs);
+        return false;
+      }
+      return true;
     }
+  }
+
+  private static String buildStackTraceForRef(final Object ref) {
+    final StringBuilder buffer = new StringBuilder(512);
+    buffer.append(Thread.currentThread()).append(" - ").append(ref).append(System.lineSeparator());
+    StackWalker.getInstance().forEach(s -> buffer.append("  ").append(s).append(System.lineSeparator()));
+    return buffer.toString();
   }
 }
