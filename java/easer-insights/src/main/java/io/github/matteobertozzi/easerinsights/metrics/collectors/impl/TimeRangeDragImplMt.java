@@ -41,6 +41,16 @@ class TimeRangeDragImplMt extends TimeRangeDragImplSt {
   }
 
   @Override
+  public void set(final long timestamp, final long value) {
+    lock.lock();
+    try {
+      super.set(timestamp, value);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  @Override
   public TimeRangeCounterSnapshot dataSnapshot() {
     lock.lock();
     try {

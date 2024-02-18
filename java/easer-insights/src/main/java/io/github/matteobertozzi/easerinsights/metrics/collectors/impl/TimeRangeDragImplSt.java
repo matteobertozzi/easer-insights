@@ -46,7 +46,8 @@ class TimeRangeDragImplSt implements TimeRangeDrag {
 
   @Override
   public void set(final long timestamp, final long value) {
-    throw new UnsupportedOperationException();
+    update(timestamp, 0);
+    counters[(int)(next % counters.length)] = value;
   }
 
   @Override
