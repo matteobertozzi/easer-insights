@@ -28,6 +28,8 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
@@ -84,16 +86,25 @@ public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
   }
 
   public static InfluxLineExporter newInfluxExporter(final String url, final String userId, final String token) {
+    Logger.debug("new influx exporter for user {}: {}", userId, url);
     return new InfluxLineExporter(url, "Bearer " + userId + ':' + token);
   }
 
   public static InfluxLineExporter newInfluxExporter(final String url, final String token) {
+    Logger.debug("new influx exporter: {}", url);
     return new InfluxLineExporter(url, "Token " + token);
   }
 
   public InfluxLineExporter addDefaultDimension(final String name, final String value) {
     dimensions.add(name);
     dimensions.add(value);
+    return this;
+  }
+
+  public InfluxLineExporter addDefaultDimensions(final Map<String, String> defaultDimensions) {
+    for (final Entry<String, String> entry: defaultDimensions.entrySet()) {
+      addDefaultDimension(entry.getKey(), entry.getValue());
+    }
     return this;
   }
 
@@ -126,6 +137,7 @@ public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
         Logger.error(e, "unable to process batch");
       }
     }
+    Logger.debug("Influx Exporter terminated!");
   }
 
   private void influxWriteData(final Collection<String> datumBatch) {
@@ -164,13 +176,15 @@ public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
     final StringBuilder builder = new StringBuilder(80);
     builder.append(collector.definition().name());
     for (int i = 0; i < dimensions.size(); i += 2) {
-      builder.append(',').append(dimensions.get(i)).append("=\"").append(dimensions.get(i + 1)).append("\"");
+      builder.append(',').append(dimensions.get(i)).append('=');
+      escape(builder, dimensions.get(i + 1));
     }
     if (collector.definition().hasDimensions()) {
       final String[] dimKeys = collector.definition().dimensionKeys();
       final String[] dimVals = collector.definition().dimensionValues();
       for (int i = 0; i < dimKeys.length; ++i) {
-        builder.append(',').append(dimKeys[i]).append("=\"").append(dimVals[i]).append("\"");
+        builder.append(',').append(dimKeys[i]).append('=');
+        escape(builder, dimVals[i]);
       }
     }
     builder.append(" value=");
@@ -189,6 +203,32 @@ public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
         }
       }
       return stream.toByteArray();
+    }
+  }
+
+  private static void escape(final StringBuilder buf, final String text) {
+    final int length = text.length();
+    int index = 0;
+    for (; index < length; ++index) {
+      final char c = text.charAt(index);
+      if (c == ' ' || c == '"') {
+        break;
+      }
+    }
+
+    if (index == length) {
+      buf.append(text);
+      return;
+    }
+
+    buf.append(text, 0, index);
+    for (; index < length; ++index) {
+      final char c = text.charAt(index);
+      switch (c) {
+        case ' ' -> buf.append("\\ ");
+        case '"' -> buf.append("\\\"");
+        default -> buf.append(c);
+      }
     }
   }
 }
