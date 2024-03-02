@@ -27,6 +27,8 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer;
@@ -79,6 +81,13 @@ public class GraphiteExporter extends AbstractEaserInsightsDatumExporter {
 
   public GraphiteExporter addDefaultDimension(final String name, final String value) {
     dimensions.add(name + '=' + value);
+    return this;
+  }
+
+  public GraphiteExporter addDefaultDimensions(final Map<String, String> defaultDimensions) {
+    for (final Entry<String, String> entry: defaultDimensions.entrySet()) {
+      addDefaultDimension(entry.getKey(), entry.getValue());
+    }
     return this;
   }
 

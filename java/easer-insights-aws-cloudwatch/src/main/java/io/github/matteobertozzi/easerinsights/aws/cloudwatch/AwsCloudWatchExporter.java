@@ -20,6 +20,8 @@ package io.github.matteobertozzi.easerinsights.aws.cloudwatch;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import io.github.matteobertozzi.easerinsights.DatumBuffer;
@@ -76,6 +78,13 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
 
   public AwsCloudWatchExporter addDefaultDimension(final String name, final String value) {
     return addDefaultDimension(Dimension.builder().name(name).value(value).build());
+  }
+
+  public AwsCloudWatchExporter addDefaultDimensions(final Map<String, String> defaultDimensions) {
+    for (final Entry<String, String> entry: defaultDimensions.entrySet()) {
+      addDefaultDimension(entry.getKey(), entry.getValue());
+    }
+    return this;
   }
 
   public AwsCloudWatchExporter addDefaultDimension(final Dimension dimension) {
