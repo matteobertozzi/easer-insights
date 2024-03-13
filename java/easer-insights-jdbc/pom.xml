@@ -36,7 +36,7 @@
     <easer.insights.version>${project.version}</easer.insights.version>
 
     <!-- jdbc drivers -->
-    <aws.mysql.version>1.1.13</aws.mysql.version>
+    <aws.mysql.version>1.1.14</aws.mysql.version>
     <aws.postgresql.version>0.1.0</aws.postgresql.version>
     <mysql.version>8.3.0</mysql.version>
     <sqlserver.version>12.6.1.jre8</sqlserver.version>
@@ -44,13 +44,13 @@
     <oracle.version>23.3.0.23.09</oracle.version>
     <rocksdb.version>8.11.3</rocksdb.version>
     <duckdb.version>0.10.0</duckdb.version>
-    <sqlite.version>3.45.1.0</sqlite.version>
+    <sqlite.version>3.45.2.0</sqlite.version>
 
     <!-- tests -->
     <junit.version>5.10.2</junit.version>
 
     <!-- maven/build -->
-    <maven.gpg.version>3.1.0</maven.gpg.version>
+    <maven.gpg.version>3.2.0</maven.gpg.version>
     <maven.jar.version>3.3.0</maven.jar.version>
     <maven.compiler.version>3.12.1</maven.compiler.version>
     <maven.source.version>3.3.0</maven.source.version>
