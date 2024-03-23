@@ -49,6 +49,7 @@ public abstract class AbstractEaserInsightsDatumExporter implements EaserInsight
     }
 
     datumProcessorThread = Thread.ofVirtual().name(name() + "DatumProcessor").start(this::datumBufferProcessor);
+    Logger.debug("starting {} on virtual thread {}", this, datumProcessorThread);
   }
 
   @Override
