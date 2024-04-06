@@ -43,7 +43,7 @@
     <postgresql.version>42.7.3</postgresql.version>
     <oracle.version>23.3.0.23.09</oracle.version>
     <rocksdb.version>9.0.0</rocksdb.version>
-    <duckdb.version>0.10.0</duckdb.version>
+    <duckdb.version>0.10.1</duckdb.version>
     <sqlite.version>3.45.2.0</sqlite.version>
 
     <!-- tests -->
