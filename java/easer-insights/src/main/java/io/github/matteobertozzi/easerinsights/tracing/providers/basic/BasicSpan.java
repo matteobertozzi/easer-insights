@@ -42,7 +42,7 @@ public class BasicSpan implements Span {
   private SpanState state = SpanState.IN_PROGRESS;
   private Throwable exception = null;
   private String name = null;
-  private long endUnixNanos;
+  private long endUnixNanos = -1;
 
   public BasicSpan(final RootSpan rootSpan, final SpanId parentId, final SpanId spanId) {
     this.rootSpan = rootSpan;
@@ -83,7 +83,7 @@ public class BasicSpan implements Span {
 
   @Override
   public long elapsedNanos() {
-    if (endUnixNanos < 0) {
+    if (endUnixNanos <= 0) {
       return TimeUtil.currentEpochNanos() - startUnixNanos;
     }
     return endUnixNanos - startUnixNanos;
