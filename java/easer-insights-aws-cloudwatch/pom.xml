@@ -34,11 +34,11 @@
 
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
-    <aws-java-sdk.version>2.25.31</aws-java-sdk.version>
+    <aws-java-sdk.version>2.25.35</aws-java-sdk.version>
 
     <junit.version>5.10.2</junit.version>
 
-    <maven.gpg.version>3.2.3</maven.gpg.version>
+    <maven.gpg.version>3.2.4</maven.gpg.version>
     <maven.jar.version>3.4.0</maven.jar.version>
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
