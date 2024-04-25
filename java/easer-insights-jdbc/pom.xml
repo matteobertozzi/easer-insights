@@ -42,7 +42,7 @@
     <sqlserver.version>12.6.1.jre8</sqlserver.version>
     <postgresql.version>42.7.3</postgresql.version>
     <oracle.version>23.3.0.23.09</oracle.version>
-    <rocksdb.version>9.0.0</rocksdb.version>
+    <rocksdb.version>9.0.1</rocksdb.version>
     <duckdb.version>0.10.2</duckdb.version>
     <sqlite.version>3.45.3.0</sqlite.version>
 
@@ -51,7 +51,7 @@
 
     <!-- maven/build -->
     <maven.gpg.version>3.2.4</maven.gpg.version>
-    <maven.jar.version>3.4.0</maven.jar.version>
+    <maven.jar.version>3.4.1</maven.jar.version>
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
     <maven.javadoc.version>3.6.3</maven.javadoc.version>
