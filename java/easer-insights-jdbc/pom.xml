@@ -36,7 +36,7 @@
     <easer.insights.version>${project.version}</easer.insights.version>
 
     <!-- jdbc drivers -->
-    <aws.mysql.version>1.1.14</aws.mysql.version>
+    <aws.mysql.version>1.1.15</aws.mysql.version>
     <aws.postgresql.version>0.1.0</aws.postgresql.version>
     <mysql.version>8.4.0</mysql.version>
     <sqlserver.version>12.6.2.jre8</sqlserver.version>
