@@ -34,7 +34,7 @@
 
   <properties>
     <rednaco.version>3.0.0-SNAPSHOT</rednaco.version>
-    <rocksdb.version>8.11.4</rocksdb.version>
+    <rocksdb.version>9.2.1</rocksdb.version>
 
     <junit.version>5.10.2</junit.version>
 
@@ -43,9 +43,9 @@
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
     <maven.javadoc.version>3.7.0</maven.javadoc.version>
-    <maven.surefire.version>3.2.5</maven.surefire.version>
-    <maven.failsafe.version>3.2.5</maven.failsafe.version>
-    <maven.dependency.version>3.6.1</maven.dependency.version>
+    <maven.surefire.version>3.3.0</maven.surefire.version>
+    <maven.failsafe.version>3.3.0</maven.failsafe.version>
+    <maven.dependency.version>3.7.0</maven.dependency.version>
     <nexus.staging.maven.version>1.7.0</nexus.staging.maven.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -68,7 +68,7 @@
     <dependency>
       <groupId>me.lemire.integercompression</groupId>
       <artifactId>JavaFastPFOR</artifactId>
-      <version>0.1.12</version>
+      <version>0.2.1</version>
     </dependency>
 
 

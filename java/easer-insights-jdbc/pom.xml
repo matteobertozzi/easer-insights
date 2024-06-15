@@ -43,8 +43,8 @@
     <postgresql.version>42.7.3</postgresql.version>
     <oracle.version>23.4.0.24.05</oracle.version>
     <rocksdb.version>9.2.1</rocksdb.version>
-    <duckdb.version>0.10.3</duckdb.version>
-    <sqlite.version>3.45.3.0</sqlite.version>
+    <duckdb.version>1.0.0</duckdb.version>
+    <sqlite.version>3.46.0.0</sqlite.version>
 
     <!-- tests -->
     <junit.version>5.10.2</junit.version>
@@ -55,9 +55,9 @@
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
     <maven.javadoc.version>3.7.0</maven.javadoc.version>
-    <maven.surefire.version>3.2.5</maven.surefire.version>
-    <maven.failsafe.version>3.2.5</maven.failsafe.version>
-    <maven.dependency.version>3.6.1</maven.dependency.version>
+    <maven.surefire.version>3.3.0</maven.surefire.version>
+    <maven.failsafe.version>3.3.0</maven.failsafe.version>
+    <maven.dependency.version>3.7.0</maven.dependency.version>
     <nexus.staging.maven.version>1.7.0</nexus.staging.maven.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
