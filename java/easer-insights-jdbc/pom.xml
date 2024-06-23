@@ -39,7 +39,7 @@
     <aws.mysql.version>1.1.15</aws.mysql.version>
     <aws.postgresql.version>0.1.0</aws.postgresql.version>
     <mysql.version>8.4.0</mysql.version>
-    <sqlserver.version>12.6.2.jre8</sqlserver.version>
+    <sqlserver.version>12.6.3.jre8</sqlserver.version>
     <postgresql.version>42.7.3</postgresql.version>
     <oracle.version>23.4.0.24.05</oracle.version>
     <rocksdb.version>9.2.1</rocksdb.version>
@@ -51,13 +51,13 @@
 
     <!-- maven/build -->
     <maven.gpg.version>3.2.4</maven.gpg.version>
-    <maven.jar.version>3.4.1</maven.jar.version>
+    <maven.jar.version>3.4.2</maven.jar.version>
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
     <maven.javadoc.version>3.7.0</maven.javadoc.version>
     <maven.surefire.version>3.3.0</maven.surefire.version>
     <maven.failsafe.version>3.3.0</maven.failsafe.version>
-    <maven.dependency.version>3.7.0</maven.dependency.version>
+    <maven.dependency.version>3.7.1</maven.dependency.version>
     <nexus.staging.maven.version>1.7.0</nexus.staging.maven.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
