@@ -34,16 +34,16 @@
 
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
-    <netty.version>4.1.111.Final</netty.version>
+    <netty.version>4.1.112.Final</netty.version>
     <rednaco.version>3.0.0-SNAPSHOT</rednaco.version>
 
     <maven.gpg.version>3.2.4</maven.gpg.version>
     <maven.jar.version>3.4.2</maven.jar.version>
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
-    <maven.javadoc.version>3.7.0</maven.javadoc.version>
-    <maven.surefire.version>3.3.0</maven.surefire.version>
-    <maven.failsafe.version>3.3.0</maven.failsafe.version>
+    <maven.javadoc.version>3.8.0</maven.javadoc.version>
+    <maven.surefire.version>3.3.1</maven.surefire.version>
+    <maven.failsafe.version>3.3.1</maven.failsafe.version>
     <maven.dependency.version>3.7.1</maven.dependency.version>
     <nexus.staging.maven.version>1.6.13</nexus.staging.maven.version>
 
