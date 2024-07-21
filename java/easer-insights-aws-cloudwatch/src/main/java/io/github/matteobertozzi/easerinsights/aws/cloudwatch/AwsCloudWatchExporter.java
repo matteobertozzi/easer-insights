@@ -33,6 +33,7 @@ import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
+import io.github.matteobertozzi.rednaco.collections.maps.MapUtil;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Dimension;
@@ -73,7 +74,11 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
   }
 
   public static AwsCloudWatchExporter newAwsCloudWatchExporter(final String regionName) {
-    return new AwsCloudWatchExporter(CloudWatchClient.builder().region(Region.of(regionName)).build());
+    return newAwsCloudWatchExporter(Region.of(regionName));
+  }
+
+  public static AwsCloudWatchExporter newAwsCloudWatchExporter(final Region region) {
+    return new AwsCloudWatchExporter(CloudWatchClient.builder().region(region).build());
   }
 
   public AwsCloudWatchExporter addDefaultDimension(final String name, final String value) {
@@ -81,6 +86,8 @@ public class AwsCloudWatchExporter extends AbstractEaserInsightsDatumExporter {
   }
 
   public AwsCloudWatchExporter addDefaultDimensions(final Map<String, String> defaultDimensions) {
+    if (MapUtil.isEmpty(defaultDimensions)) return this;
+
     for (final Entry<String, String> entry: defaultDimensions.entrySet()) {
       addDefaultDimension(entry.getKey(), entry.getValue());
     }
