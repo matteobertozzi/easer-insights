@@ -37,7 +37,7 @@
     <netty.version>4.1.112.Final</netty.version>
     <rednaco.version>3.0.0-SNAPSHOT</rednaco.version>
 
-    <maven.gpg.version>3.2.4</maven.gpg.version>
+    <maven.gpg.version>3.2.5</maven.gpg.version>
     <maven.jar.version>3.4.2</maven.jar.version>
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
