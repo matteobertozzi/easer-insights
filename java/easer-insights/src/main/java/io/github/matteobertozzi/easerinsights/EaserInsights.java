@@ -21,9 +21,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import io.github.matteobertozzi.easerinsights.logging.Logger;
+import io.github.matteobertozzi.rednaco.bytes.encoding.IntEncoder;
+import io.github.matteobertozzi.rednaco.strings.Base32;
+import io.github.matteobertozzi.rednaco.util.RandData;
 
 public final class EaserInsights implements AutoCloseable {
   public static final EaserInsights INSTANCE = new EaserInsights();
+  public static final String INSTANCE_ID = timeBasedId128();
 
   private final ArrayList<EaserInsightsExporter> exporters = new ArrayList<>();
   private final EaserInsightsExporterQueue exporterQueue = new EaserInsightsExporterQueue();
@@ -54,5 +58,15 @@ public final class EaserInsights implements AutoCloseable {
     if (exporter instanceof final EaserInsightsExporter.DatumBufferFlusher flusher) {
       exporterQueue.subscribeToDatumBuffer(flusher);
     }
+  }
+
+  private static String timeBasedId128() {
+    final long timestamp = System.currentTimeMillis();
+    final long high = (timestamp << 16) | RandData.generateInt() & 0xffffL;
+    final long low = RandData.generateLong();
+    final byte[] buf = new byte[16];
+    IntEncoder.BIG_ENDIAN.writeFixed64(buf, 0, high);
+    IntEncoder.BIG_ENDIAN.writeFixed64(buf, 8, low);
+    return Base32.base32hex().encode(buf);
   }
 }
