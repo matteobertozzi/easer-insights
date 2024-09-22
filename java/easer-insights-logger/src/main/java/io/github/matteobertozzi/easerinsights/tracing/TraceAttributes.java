@@ -29,6 +29,7 @@ public final class TraceAttributes {
 
   public static final TraceStringAttribute OWNER_ID = new TraceStringAttribute("owner.id");
   public static final TraceStringAttribute OWNER_NAME = new TraceStringAttribute("owner.name");
+  public static final TraceStringAttribute SESSION_ID = new TraceStringAttribute("session.id");
 
   public static final TraceStringAttribute THREAD_NAME = new TraceStringAttribute("thread.name");
   public static final TraceStringAttribute MODULE_NAME = new TraceStringAttribute("module.name");

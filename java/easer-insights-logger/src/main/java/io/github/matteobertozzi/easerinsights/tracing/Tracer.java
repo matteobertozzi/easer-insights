@@ -63,6 +63,10 @@ public final class Tracer {
     return newRootSpan(traceIdProvider.newTraceId(), spanIdProvider.nullSpanId());
   }
 
+  public static RootSpan newRootSpan(final String traceId) {
+    return newRootSpan(traceIdProvider.parseTraceId(traceId), spanIdProvider.newSpanId());
+  }
+
   public static RootSpan newRootSpan(final String traceId, final String parentId) {
     return newRootSpan(traceIdProvider.parseTraceId(traceId), spanIdProvider.parseSpanId(parentId));
   }

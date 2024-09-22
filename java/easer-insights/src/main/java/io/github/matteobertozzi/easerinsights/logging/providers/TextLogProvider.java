@@ -133,9 +133,13 @@ public abstract class TextLogProvider implements LogProvider {
     }
 
     private static void addLogMessage(final StringBuilderLogBuffer buffer, final Span span, final LogLevel level, final String format, final Object[] args) {
+      final Thread thread = Thread.currentThread();
+      final String threadName = thread.getName();
+      final String threadId = String.valueOf(thread.threadId());
       final RootSpan rootSpan = span.rootSpan();
       buffer.append(LOG_DATE_FORMAT.format(ZonedDateTime.now()));
       buffer.append(" [").append(span.traceId()).append(':').append(span.spanId());
+      buffer.appendAscii(':').append(threadName).appendAscii(':').appendAscii(threadId);
       buffer.append(':').append(rootSpan.module()).append(':').append(rootSpan.tenantId()).append(':').append(rootSpan.ownerId());
       buffer.append("] ");
       buffer.append(level.name()).append(' ').append(LogUtil.lookupLineClassAndMethod(5)).append(" - ");

@@ -26,6 +26,7 @@ import io.github.matteobertozzi.easerinsights.logging.LogUtil;
 import io.github.matteobertozzi.easerinsights.logging.Logger.LogLevel;
 import io.github.matteobertozzi.easerinsights.tracing.RootSpan;
 import io.github.matteobertozzi.easerinsights.tracing.Span;
+import io.github.matteobertozzi.easerinsights.tracing.TraceAttributes;
 import io.github.matteobertozzi.rednaco.strings.StringFormat;
 import io.github.matteobertozzi.rednaco.time.TimeUtil;
 
@@ -60,12 +61,13 @@ public class JsonLogProvider implements LogProvider {
     final String thread = Thread.currentThread().getName();
     final String caller = LogUtil.lookupLineClassAndMethod(5);
     final RootSpan rootSpan = span.rootSpan();
+    final String sessionId = TraceAttributes.SESSION_ID.get(rootSpan, null);
     jsonWriter.write(new LogMsgEntry(
         nanos, hstamp,
         traceId, spanId, thread,
         caller, rootSpan.module(),
         rootSpan.tenantId(), rootSpan.tenant(),
-        rootSpan.ownerId(), rootSpan.owner(),
+        rootSpan.ownerId(), rootSpan.owner(), sessionId,
         level, message, exception));
   }
 
@@ -78,7 +80,7 @@ public class JsonLogProvider implements LogProvider {
       long nanos, long hstamp,
       String traceId, String spanId, String thread,
       String caller, String module,
-      String tenantId, String tenant, String ownerId, String owner,
+      String tenantId, String tenant, String ownerId, String owner, String sessionId,
       LogLevel level, Object message, String exception
   ) {
   }
