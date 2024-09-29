@@ -32,9 +32,18 @@ import io.github.matteobertozzi.easerinsights.jdbc.dialects.PostgreSqlDialect;
 import io.github.matteobertozzi.easerinsights.jdbc.dialects.SqlServerDialect;
 import io.github.matteobertozzi.easerinsights.jdbc.dialects.SqliteDialect;
 
-public record DbInfo(DbType type, String url, String host, String dbName, String driver, Properties properties) {
+public record DbInfo(DbType type, String url, String host, String dbName, String driver, int maxConnections, Properties properties) {
   public DbInfo(final DbType type, final String url, final String host, final String dbName, final Properties properties) {
     this(type, url, host, dbName, null, properties);
+  }
+
+  public DbInfo(final DbType type, final String url, final String host, final String dbName, final String driver, final Properties properties) {
+    this(type, url, host, dbName, driver, Integer.parseInt(properties.getProperty("easer.insights.max.connections", "0")), properties);
+  }
+
+  public String internalGroupId() {
+    final String user = properties.getProperty("user");
+    return host() + "/" + dbName() + "/" + user;
   }
 
   @FunctionalInterface

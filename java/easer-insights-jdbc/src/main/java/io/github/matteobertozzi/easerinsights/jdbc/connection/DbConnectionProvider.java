@@ -24,6 +24,8 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import io.github.matteobertozzi.easerinsights.jdbc.DbInfo;
@@ -90,7 +92,29 @@ public final class DbConnectionProvider {
   // ====================================================================================================
   // Connection helpers
   // ====================================================================================================
-  public static final int DEFAULT_LOGIN_TIMEOUT_SEC = StringConverter.toInt(System.getProperty("easer.insights.jdbc.login.timeout.sec"), 3);
+  public static final int DEFAULT_LOGIN_TIMEOUT_SEC = StringConverter.toInt(System.getProperty("easer.insights.jdbc.login.timeout.sec"), 5);
+  public static final int MAX_CONNECTION_TIMEOUT_SEC = StringConverter.toInt(System.getProperty("easer.insights.jdbc.max.connections.timeout.sec"), 10);
+
+  private static final ConcurrentHashMap<String, Semaphore> connectionLimiter = new ConcurrentHashMap<>();
+  private static boolean tryAcquireConnectionPermission(final DbInfo dbInfo) {
+    final int maxConnections = dbInfo.maxConnections();
+    if (maxConnections <= 0) return true;
+
+    final Semaphore semaphore = connectionLimiter.computeIfAbsent(dbInfo.internalGroupId(), k -> new Semaphore(maxConnections));
+    try {
+      return semaphore.tryAcquire(MAX_CONNECTION_TIMEOUT_SEC, TimeUnit.SECONDS);
+    } catch (final InterruptedException e) {
+      Thread.interrupted();
+      return false;
+    }
+  }
+
+  private static void releaseConnectionPermission(final DbInfo dbInfo) {
+    final int maxConnections = dbInfo.maxConnections();
+    if (maxConnections <= 0) return;
+
+    connectionLimiter.get(dbInfo.internalGroupId()).release();
+  }
 
   private DbConnection createNewConnection(final DbInfo dbInfo) throws DbConnectionException {
     final long startTime = System.nanoTime();
@@ -100,9 +124,16 @@ public final class DbConnectionProvider {
 
     Connection connection = null;
     try {
+      if (!tryAcquireConnectionPermission(dbInfo)) {
+        throw new DbConnectionException("Unable to connect to server DB " + dbInfo.url() + ". too many connection open (service limit reached)");
+      }
+
       DriverManager.setLoginTimeout(DEFAULT_LOGIN_TIMEOUT_SEC);
       connection = DriverManager.getConnection(dbInfo.url(), dbInfo.properties());
-      if (connection == null) throw new DbConnectionException("unable to create db connection to " + dbInfo);
+      if (connection == null) {
+        releaseConnectionPermission(dbInfo);
+        throw new DbConnectionException("unable to create db connection to " + dbInfo);
+      }
 
       final long elapsedTime = System.nanoTime() - startTime;
       final DbStats dbStats = DbStats.get(dbInfo);
@@ -119,7 +150,7 @@ public final class DbConnectionProvider {
       return new DbConnection(dbInfo, dbStats, connection);
     } catch (final SQLException e) {
       final DbStats stats = DbStats.get(dbInfo);
-      closeQuietly(stats, connection);
+      closeQuietly(dbInfo, stats, connection);
       stats.addConnectionFailure(System.nanoTime() - startTime);
 
       Logger.error("unable to create a new db-connection: {} {}", e.getErrorCode(), e.getMessage());
@@ -127,9 +158,10 @@ public final class DbConnectionProvider {
     }
   }
 
-  static void closeQuietly(final DbStats stats, final Connection connection) {
+  static void closeQuietly(final DbInfo dbInfo, final DbStats stats, final Connection connection) {
     if (connection == null) return;
     try {
+      releaseConnectionPermission(dbInfo);
       stats.decOpenConnections();
       connection.close();
     } catch (final SQLException e) {

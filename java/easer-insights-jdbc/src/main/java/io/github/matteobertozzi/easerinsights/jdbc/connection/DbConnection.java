@@ -100,11 +100,11 @@ public final class DbConnection implements Closeable {
         rollback();
       }
       if (!dbPool.addToPool(Thread.currentThread(), this)) {
-        DbConnectionProvider.closeQuietly(dbStats, connection);
+        DbConnectionProvider.closeQuietly(dbInfo, dbStats, connection);
       }
     } else {
       Logger.debug("close direct no pool associated: {}", this);
-      DbConnectionProvider.closeQuietly(dbStats, connection);
+      DbConnectionProvider.closeQuietly(dbInfo, dbStats, connection);
     }
 
     resetQueryPerTransaction();

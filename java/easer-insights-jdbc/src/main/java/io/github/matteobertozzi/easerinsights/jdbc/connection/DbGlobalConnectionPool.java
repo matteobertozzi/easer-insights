@@ -18,17 +18,29 @@
 package io.github.matteobertozzi.easerinsights.jdbc.connection;
 
 import java.time.Duration;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
 
+import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.jdbc.DbInfo;
 import io.github.matteobertozzi.easerinsights.jdbc.connection.DbConnectionPool.AbstractDbConnectionPoolWithCleaner;
 import io.github.matteobertozzi.easerinsights.logging.Logger;
+import io.github.matteobertozzi.easerinsights.metrics.MetricDimension;
+import io.github.matteobertozzi.easerinsights.metrics.Metrics;
+import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeDrag;
+import io.github.matteobertozzi.rednaco.collections.pool.MultiObjectPool;
 import io.github.matteobertozzi.rednaco.strings.StringConverter;
 
 public class DbGlobalConnectionPool extends AbstractDbConnectionPoolWithCleaner {
   private static final int MAX_POOLED_CONNECTIONS = StringConverter.toInt(System.getProperty("easer.insights.jdbc.pool.max.pooled.connections"), 16);
 
-  private final GloabalPool pool;
+  private static final MetricDimension<TimeRangeDrag> poolSize = Metrics.newCollectorWithDimensions()
+    .dimensions("name")
+    .unit(DatumUnit.COUNT)
+    .name("jdbc.pool.size.global")
+    .label("JDBC Global Pool Size")
+    .register(() -> TimeRangeDrag.newMultiThreaded(60, 1, TimeUnit.MINUTES));
+
+  private final GlobalPool pool;
 
   public DbGlobalConnectionPool(final String name) {
     this(name, MAX_POOLED_CONNECTIONS);
@@ -40,7 +52,7 @@ public class DbGlobalConnectionPool extends AbstractDbConnectionPoolWithCleaner 
 
   public DbGlobalConnectionPool(final String name, final int maxPooledConnections, final Duration maxConnectionOpen, final Duration maxConnectionIdle) {
     super(name, maxConnectionOpen, maxConnectionIdle);
-    this.pool = new GloabalPool(maxPooledConnections);
+    this.pool = new GlobalPool(poolSize.get(name), maxPooledConnections);
   }
 
   // ====================================================================================================
@@ -70,102 +82,25 @@ public class DbGlobalConnectionPool extends AbstractDbConnectionPoolWithCleaner 
 
   @Override
   protected void cleanExpired() {
-    pool.cleanExpired(this);
+    final int active = pool.cleanExpired(this);
+    Logger.debug("the pool was cleaned. {} active connections.", active);
   }
 
   // ====================================================================================================
   // PRIVATE Helpers
   // ====================================================================================================
-  private static final class GloabalPool {
-    private final ReentrantLock lock = new ReentrantLock();
-
-    private final int[] dbInfoHashes;
-    private final Object[] items; // dbInfo|dbConnection|...
-    private int freeSlotIndex;
-    private int size;
-
-    private GloabalPool(final int size) {
-      this.dbInfoHashes = new int[size];
-      this.items = new Object[size << 1];
-      freeSlotIndex = 0;
-      for (int i = 0, n = dbInfoHashes.length - 1; i < n; ++i) {
-        dbInfoHashes[i] = -(i + 1);
-      }
-      dbInfoHashes[dbInfoHashes.length - 1] = 0;
+  private static final class GlobalPool extends MultiObjectPool<DbInfo, DbConnection> {
+    private GlobalPool(final TimeRangeDrag poolSizeTrc, final int size) {
+      super(size, poolSizeTrc::sample);
     }
 
     private boolean add(final DbConnection con) {
-      final DbInfo dbInfo = con.getDbInfo();
-      final int dbInfoHash = dbInfo.hashCode() & 0x7fffffff;
-      lock.lock();
-      try {
-        if (freeSlotIndex < 0) {
-          return false;
-        }
-
-        final int index = freeSlotIndex;
-        final int itemIndex = index << 1;
-        freeSlotIndex = -dbInfoHashes[index];
-        dbInfoHashes[index] = dbInfoHash;
-        items[itemIndex] = dbInfo;
-        items[itemIndex + 1] = con;
-        size++;
-        return true;
-      } finally {
-        lock.unlock();
-      }
+      return super.add(con.getDbInfo(), con);
     }
 
-    private DbConnection poll(final DbInfo dbInfo) {
-      final int dbInfoHash = dbInfo.hashCode() & 0x7fffffff;
-
-      lock.lock();
-      try {
-        if (size == 0) {
-          return null;
-        }
-
-        for (int i = 0; i < dbInfoHashes.length; ++i) {
-          if (dbInfoHashes[i] != dbInfoHash) continue;
-
-          final int index = (i << 1);
-          final DbInfo indexDbInfo = (DbInfo)items[index];
-          if (!dbInfo.equals(indexDbInfo)) continue;
-
-          final DbConnection con = (DbConnection)items[index + 1];
-          items[index] = null;
-          items[index + 1] = null;
-          dbInfoHashes[i] = -freeSlotIndex;
-          freeSlotIndex = i;
-          size--;
-          return con;
-        }
-        return null;
-      } finally {
-        lock.unlock();
-      }
-    }
-
-    private void cleanExpired(final DbGlobalConnectionPool pool) {
+    private int cleanExpired(final DbGlobalConnectionPool pool) {
       final long now = System.nanoTime();
-      lock.lock();
-      try {
-        for (int i = 0; i < dbInfoHashes.length; ++i) {
-          final int index = (i << 1);
-          final DbConnection con = (DbConnection)items[index + 1];
-          if (con == null) continue;
-
-          if (pool.isExpired(con, now)) {
-            items[index] = null;
-            items[index + 1] = null;
-            dbInfoHashes[i] = freeSlotIndex;
-            freeSlotIndex = i;
-            size--;
-          }
-        }
-      } finally {
-        lock.unlock();
-      }
+      return clean(con -> pool.isExpired(con, now), con -> pool.closePooledConnection(con, "cleaning up", false));
     }
   }
 }

@@ -44,7 +44,7 @@ final class DbStats extends MetricDimensionGroup {
 
   private static final ConcurrentHashMap<String, DbStats> groups = new ConcurrentHashMap<>();
   static DbStats get(final DbInfo dbInfo) {
-    final String key = dbInfo.host() + "/" + dbInfo.dbName();
+    final String key = dbInfo.internalGroupId();
     final DbStats stats = groups.get(key);
     if (stats != null) return stats;
 
