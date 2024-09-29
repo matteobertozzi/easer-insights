@@ -36,9 +36,9 @@
     <rednaco.version>3.0.0-SNAPSHOT</rednaco.version>
     <rocksdb.version>9.5.2</rocksdb.version>
 
-    <junit.version>5.11.0</junit.version>
+    <junit.version>5.11.1</junit.version>
 
-    <maven.gpg.version>3.2.6</maven.gpg.version>
+    <maven.gpg.version>3.2.7</maven.gpg.version>
     <maven.jar.version>3.4.2</maven.jar.version>
     <maven.compiler.version>3.13.0</maven.compiler.version>
     <maven.source.version>3.3.1</maven.source.version>
