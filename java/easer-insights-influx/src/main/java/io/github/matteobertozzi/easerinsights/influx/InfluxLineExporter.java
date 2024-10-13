@@ -40,10 +40,12 @@ import io.github.matteobertozzi.easerinsights.DatumUnit;
 import io.github.matteobertozzi.easerinsights.exporters.AbstractEaserInsightsDatumExporter;
 import io.github.matteobertozzi.easerinsights.logging.Logger;
 import io.github.matteobertozzi.easerinsights.metrics.MetricCollector;
+import io.github.matteobertozzi.easerinsights.metrics.MetricDefinition;
 import io.github.matteobertozzi.easerinsights.metrics.Metrics;
 import io.github.matteobertozzi.easerinsights.metrics.MetricsRegistry;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.MaxAvgTimeRangeGauge;
 import io.github.matteobertozzi.easerinsights.metrics.collectors.TimeRangeCounter;
+import io.github.matteobertozzi.rednaco.strings.StringUtil;
 import io.github.matteobertozzi.rednaco.threading.ThreadUtil;
 
 public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
@@ -177,14 +179,14 @@ public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
     builder.append(collector.definition().name());
     for (int i = 0; i < dimensions.size(); i += 2) {
       builder.append(',').append(dimensions.get(i)).append('=');
-      escape(builder, dimensions.get(i + 1));
+      escape(builder, collector.definition(), dimensions.get(i), dimensions.get(i + 1));
     }
     if (collector.definition().hasDimensions()) {
       final String[] dimKeys = collector.definition().dimensionKeys();
       final String[] dimVals = collector.definition().dimensionValues();
       for (int i = 0; i < dimKeys.length; ++i) {
         builder.append(',').append(dimKeys[i]).append('=');
-        escape(builder, dimVals[i]);
+        escape(builder, collector.definition(), dimensions.get(i), dimVals[i]);
       }
     }
     builder.append(" value=");
@@ -206,7 +208,11 @@ public class InfluxLineExporter extends AbstractEaserInsightsDatumExporter {
     }
   }
 
-  private static void escape(final StringBuilder buf, final String text) {
+  private static void escape(final StringBuilder buf, final MetricDefinition definition, final String dimension, final String text) {
+    if (StringUtil.isEmpty(text)) {
+      throw new IllegalArgumentException("escaping null dimension " + dimension + " for " + definition.name());
+    }
+
     final int length = text.length();
     int index = 0;
     for (; index < length; ++index) {
