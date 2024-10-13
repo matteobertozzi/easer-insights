@@ -73,6 +73,8 @@ public record DbInfo(DbType type, String url, String host, String dbName, String
     DB_INFO_FROM_FACTORY.put(DbType.MYSQL, MySqlDialect::dbInfoFrom);
 
     DB_INFO_FROM_FACTORY.put(DbType.SQLSERVER, SqlServerDialect::dbInfoFrom);
+
+    DB_INFO_FROM_FACTORY.put(DbType.DUCKDB, DuckDbDialect::dbInfoFrom);
   }
 
   public static DbInfo from(final DbType type, final String host, final String dbName, final Map<String, String> properties) {

@@ -41,4 +41,9 @@ public final class DuckDbDialect {
     }
     return null;
   }
+
+  public static DbInfo dbInfoFrom(final DbType type, final String host, final String dbName, final Properties properties) {
+    final String jdbcUrl = JDBC_PREFIX + dbName;
+    return new DbInfo(type, jdbcUrl, "local-disk", dbName, properties);
+  }
 }
