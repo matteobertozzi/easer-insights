@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights-jdbc</artifactId>
-  <version>0.1.6-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>easer-insights-jdbc</name>
   <description>EASER Insights - JDBC.</description>

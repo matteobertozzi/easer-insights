@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights-profiler</artifactId>
-  <version>0.1.6-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>easer-insights-profiler</name>
   <description>EASER Insights Profiler Util.</description>
