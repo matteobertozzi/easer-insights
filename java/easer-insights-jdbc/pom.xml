@@ -47,7 +47,7 @@
     <sqlite.version>3.46.1.3</sqlite.version>
 
     <!-- tests -->
-    <junit.version>5.11.2</junit.version>
+    <junit.version>5.11.3</junit.version>
 
     <!-- maven/build -->
     <maven.gpg.version>3.2.7</maven.gpg.version>
@@ -57,7 +57,7 @@
     <maven.javadoc.version>3.10.1</maven.javadoc.version>
     <maven.surefire.version>3.5.1</maven.surefire.version>
     <maven.failsafe.version>3.5.1</maven.failsafe.version>
-    <maven.dependency.version>3.8.0</maven.dependency.version>
+    <maven.dependency.version>3.8.1</maven.dependency.version>
     <nexus.staging.maven.version>1.7.0</nexus.staging.maven.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
