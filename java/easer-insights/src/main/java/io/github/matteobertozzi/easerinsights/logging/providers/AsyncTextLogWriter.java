@@ -17,6 +17,7 @@
 
 package io.github.matteobertozzi.easerinsights.logging.providers;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -50,20 +51,25 @@ public class AsyncTextLogWriter implements AutoCloseable {
   private final PublishQueue publishQueue;
 
   private final StripedLock<AsyncTextLogBuffer> locks;
-  private final PrintStream stream;
+  private final List<BlockFlusher> blockFlushers;
   private final Thread writerThread;
 
   public AsyncTextLogWriter(final PrintStream stream, final int blockSize) {
-    final int stripes = BitUtil.nextPow2(Runtime.getRuntime().availableProcessors());
+    this(List.of(new StreamBlockFlusher(stream)), blockSize);
+  }
 
-    publishQueue = new PublishQueue(stripes * 2);
-    poolQueue = new ArrayBlockingQueue<>(stripes * 2);
+  public AsyncTextLogWriter(final List<BlockFlusher> blockFlushers, final int blockSize) {
+    final int stripes = BitUtil.nextPow2(Runtime.getRuntime().availableProcessors());
+    final int pooledBlocks = stripes * 4;
+
+    publishQueue = new PublishQueue(pooledBlocks);
+    poolQueue = new ArrayBlockingQueue<>(pooledBlocks);
     for (int i = 0; i < stripes; ++i) {
       poolQueue.add(new RecyclableBlock(blockSize, true));
     }
 
     this.locks = new StripedLock<>(stripes, () -> new AsyncTextLogBuffer(blockSize, poolQueue, publishQueue));
-    this.stream = stream;
+    this.blockFlushers = blockFlushers;
     this.writerThread = new Thread(this::writeLoop, "AsyncTextLogWriter");
     this.writerThread.start();
   }
@@ -91,6 +97,28 @@ public class AsyncTextLogWriter implements AutoCloseable {
     }
   }
 
+  public interface BlockFlusher {
+    void write(byte[] buf, int off, int len);
+  }
+
+  public record StreamBlockFlusher(OutputStream stream) implements BlockFlusher {
+    public StreamBlockFlusher(final String streamName) {
+      this(switch (streamName) {
+        case "stdout" -> System.out;
+        case "stderr" -> System.err;
+        default -> throw new UnsupportedOperationException("invalid stream block flusher: " + streamName);
+      });
+    }
+
+    @Override
+    public void write(final byte[] buf, final int off, final int len) {
+      try {
+        stream.write(buf, off, len);
+      } catch (final IOException e) {
+        // data-loss
+      }
+    }
+  }
 
   private final class Flusher {
     private final MaxAvgTimeRangeGauge flushSize = Metrics.newCollector()
@@ -106,10 +134,10 @@ public class AsyncTextLogWriter implements AutoCloseable {
       .register(MaxAvgTimeRangeGauge.newSingleThreaded(60, 1, TimeUnit.MINUTES));
 
     private final TimeRangeCounter unpooledBlocks = Metrics.newCollector()
-    .unit(DatumUnit.COUNT)
-    .name("easer.insights.logger.unpooled.blocks")
-    .label("Async Logger Unpooled Blocks")
-    .register(TimeRangeCounter.newSingleThreaded(60, 1, TimeUnit.MINUTES));
+      .unit(DatumUnit.COUNT)
+      .name("easer.insights.logger.unpooled.blocks")
+      .label("Async Logger Unpooled Blocks")
+      .register(TimeRangeCounter.newSingleThreaded(60, 1, TimeUnit.MINUTES));
 
     private final ArrayList<RecyclableBlock> items;
 
@@ -124,7 +152,10 @@ public class AsyncTextLogWriter implements AutoCloseable {
 
       for (final RecyclableBlock block: items) {
         final long startTime = System.nanoTime();
-        final int flushBlkSize = block.transferTo(stream);
+        final int flushBlkSize = block.size();
+        for (final BlockFlusher flusher: blockFlushers) {
+          block.flush(flusher);
+        }
         final long now = TimeUtil.currentEpochMillis();
         flushTime.sample(now, System.nanoTime() - startTime);
         flushSize.sample(now, flushBlkSize);
@@ -198,6 +229,7 @@ public class AsyncTextLogWriter implements AutoCloseable {
     public boolean isEmpty() { return offset == 0; }
     public boolean isNotEmpty() { return offset != 0; }
     public boolean isFull() { return offset == block.length; }
+    public int size() { return offset; }
 
     public void reset() {
       this.offset = 0;
@@ -229,9 +261,8 @@ public class AsyncTextLogWriter implements AutoCloseable {
       offset = splitOffset;
     }
 
-    public int transferTo(final PrintStream stream) {
-      stream.write(block, 0, offset);
-      return offset;
+    public void flush(final BlockFlusher flusher) {
+      flusher.write(block, 0, offset);
     }
   }
 
