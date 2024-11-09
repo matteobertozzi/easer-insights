@@ -150,7 +150,11 @@ public final class DbConnectionProvider {
       return new DbConnection(dbInfo, dbStats, connection);
     } catch (final SQLException e) {
       final DbStats stats = DbStats.get(dbInfo);
-      closeQuietly(dbInfo, stats, connection);
+      if (connection == null) {
+        releaseConnectionPermission(dbInfo);
+      } else {
+        closeQuietly(dbInfo, stats, connection);
+      }
       stats.addConnectionFailure(System.nanoTime() - startTime);
 
       Logger.error("unable to create a new db-connection: {} {}", e.getErrorCode(), e.getMessage());
