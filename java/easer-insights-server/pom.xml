@@ -33,7 +33,7 @@
   </developers>
 
   <properties>
-    <rednaco.version>3.0.2</rednaco.version>
+    <rednaco.version>3.0.3</rednaco.version>
     <rocksdb.version>9.5.2</rocksdb.version>
 
     <junit.version>5.11.3</junit.version>
