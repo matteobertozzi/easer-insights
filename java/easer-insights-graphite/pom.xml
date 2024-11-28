@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights-graphite</artifactId>
-  <version>1.0.4</version>
+  <version>1.0.5</version>
 
   <name>easer-insights-graphite</name>
   <description>EASER Insights - Graphite Exporter.</description>
@@ -34,7 +34,7 @@
 
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
-    <rednaco.version>3.0.3</rednaco.version>
+    <rednaco.version>3.0.5</rednaco.version>
 
     <junit.version>5.11.3</junit.version>
 

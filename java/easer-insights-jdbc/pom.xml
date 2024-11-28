@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights-jdbc</artifactId>
-  <version>1.0.4</version>
+  <version>1.0.5</version>
 
   <name>easer-insights-jdbc</name>
   <description>EASER Insights - JDBC.</description>
@@ -44,7 +44,7 @@
     <oracle.version>23.6.0.24.10</oracle.version>
     <rocksdb.version>9.7.3</rocksdb.version>
     <duckdb.version>1.1.3</duckdb.version>
-    <sqlite.version>3.47.0.0</sqlite.version>
+    <sqlite.version>3.47.1.0</sqlite.version>
 
     <!-- tests -->
     <junit.version>5.11.3</junit.version>

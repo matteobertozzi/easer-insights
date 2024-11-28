@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>example-http-service-insights</artifactId>
-  <version>1.0.4</version>
+  <version>1.0.5</version>
 
   <name>example-http-service-insights</name>
   <description>Example HTTP Service using EASER Insights</description>
@@ -35,7 +35,7 @@
   <properties>
     <easer.insights.version>${project.version}</easer.insights.version>
     <netty.version>4.1.115.Final</netty.version>
-    <rednaco.version>3.0.3</rednaco.version>
+    <rednaco.version>3.0.5</rednaco.version>
 
     <maven.gpg.version>3.2.7</maven.gpg.version>
     <maven.jar.version>3.4.2</maven.jar.version>

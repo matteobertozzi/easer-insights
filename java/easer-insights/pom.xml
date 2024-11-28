@@ -6,7 +6,7 @@
 
   <groupId>io.github.matteobertozzi</groupId>
   <artifactId>easer-insights</artifactId>
-  <version>1.0.4</version>
+  <version>1.0.5</version>
 
   <name>easer-insights</name>
   <description>EASER Insights is Library for collecting and publishing metrics.</description>
@@ -51,7 +51,7 @@
   </repositories>
 
   <properties>
-    <rednaco.version>3.0.3</rednaco.version>
+    <rednaco.version>3.0.5</rednaco.version>
     <junit.version>5.11.3</junit.version>
 
     <maven.gpg.version>3.2.7</maven.gpg.version>
